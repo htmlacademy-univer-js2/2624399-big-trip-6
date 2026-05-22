@@ -1,11 +1,13 @@
-import {RenderPosition, render} from '../render.js';
+import {RenderPosition, render, replace} from '../render.js';
 import {FilterType} from '../const.js';
 import SortView from '../view/sort-view.js';
 import EventsListView from '../view/events-list-view.js';
 import NoPointView from '../view/no-point-view.js';
+import TripInfoView from '../view/trip-info-view.js';
 import RoutePointPresenter from './route-point-presenter.js';
 import CreatePointPresenter from './create-point-presenter.js';
 import UiBlocker from '../framework/ui-blocker/ui-blocker.js';
+import dayjs from 'dayjs';
 
 const SortType = {
   DAY: 'sort-day',
@@ -42,6 +44,67 @@ function sortPointsByPrice(points) {
   return [...points].sort((pointA, pointB) => pointB.basePrice - pointA.basePrice);
 }
 
+function formatTripDates(points) {
+  if (!points.length) {
+    return '';
+  }
+
+  const sorted = [...points].sort((a, b) => new Date(a.dateFrom) - new Date(b.dateFrom));
+  const start = dayjs(sorted[0].dateFrom);
+  const end = dayjs(sorted[sorted.length - 1].dateTo);
+
+  if (start.isSame(end, 'month') && start.isSame(end, 'year')) {
+    return `${start.format('D')}&nbsp;&mdash;&nbsp;${end.format('D MMM')}`;
+  }
+
+  if (start.isSame(end, 'year')) {
+    return `${start.format('D MMM')}&nbsp;&mdash;&nbsp;${end.format('D MMM')}`;
+  }
+
+  return `${start.format('D MMM YYYY')}&nbsp;&mdash;&nbsp;${end.format('D MMM YYYY')}`;
+}
+
+function buildRouteTitle(points, pointsModel) {
+  if (!points.length) {
+    return '';
+  }
+
+  const sorted = [...points].sort((a, b) => new Date(a.dateFrom) - new Date(b.dateFrom));
+  const names = [];
+
+  sorted.forEach((point) => {
+    const dest = pointsModel.getDestinationById(point.destination);
+    const name = dest?.name || '';
+    if (!name) {
+      return;
+    }
+    if (names.length === 0 || names[names.length - 1] !== name) {
+      names.push(name);
+    }
+  });
+
+  if (names.length === 0) {
+    return '';
+  }
+
+  if (names.length > 3) {
+    return `${names[0]} &mdash; ... &mdash; ${names[names.length - 1]}`;
+  }
+
+  return names.join(' &mdash; ');
+}
+
+function calculateTotalPrice(points, pointsModel) {
+  return points.reduce((sum, point) => {
+    const offersSum = (point.offers || []).reduce((acc, offerId) => {
+      const offer = pointsModel.getOfferById(offerId);
+      return acc + (offer?.price || 0);
+    }, 0);
+
+    return sum + (point.basePrice || 0) + offersSum;
+  }, 0);
+}
+
 export default class BoardPresenter {
   #pointsModel = null;
   #filterModel = null;
@@ -49,6 +112,8 @@ export default class BoardPresenter {
   #eventsList = null;
   #eventsListView = null;
   #sortView = null;
+  #tripInfoComponent = null;
+  #tripInfoContainer = null;
   #routePointPresenters = [];
   #createPointPresenter = null;
   #sortType = SortType.DAY;
@@ -58,6 +123,7 @@ export default class BoardPresenter {
     this.#pointsModel = pointsModel;
     this.#filterModel = filterModel;
     this.#eventsContainer = document.querySelector('.trip-events');
+    this.#tripInfoContainer = document.querySelector('.trip-main');
   }
 
   #resetRoutePointsView() {
@@ -166,6 +232,27 @@ export default class BoardPresenter {
     this.#renderRoutePoints();
   };
 
+  #renderTripInfo() {
+    const points = this.#pointsModel.getPoints();
+    const route = buildRouteTitle(points, this.#pointsModel);
+    const dates = formatTripDates(points);
+    const price = calculateTotalPrice(points, this.#pointsModel);
+
+    const tripInfoComponent = new TripInfoView({route, dates, price});
+
+    const existing = this.#tripInfoContainer.querySelector('.trip-main__trip-info');
+
+    if (this.#tripInfoComponent) {
+      replace(tripInfoComponent, this.#tripInfoComponent);
+    } else if (existing) {
+      existing.replaceWith(tripInfoComponent.element);
+    } else {
+      render(tripInfoComponent, this.#tripInfoContainer, RenderPosition.AFTERBEGIN);
+    }
+
+    this.#tripInfoComponent = tripInfoComponent;
+  }
+
   #sortTypeChangeHandler = (sortType) => {
     if (this.#sortType === sortType) {
       return;
@@ -180,6 +267,7 @@ export default class BoardPresenter {
       this.#sortType = SortType.DAY;
     }
 
+    this.#renderTripInfo();
     this.#renderBoard();
   };
 
@@ -241,6 +329,7 @@ export default class BoardPresenter {
     const addPointButton = document.querySelector('.trip-main__event-add-btn');
     addPointButton.addEventListener('click', this.#handleAddPointClick);
 
+    this.#renderTripInfo();
     this.#renderBoard();
   }
 }
