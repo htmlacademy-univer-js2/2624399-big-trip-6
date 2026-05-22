@@ -1,18 +1,7 @@
 import {RenderPosition, render, replace} from '../render.js';
 import RoutePointView from '../view/route-point-view.js';
 import EditPointView from '../view/edit-point-view.js';
-
-const POINT_TYPES = [
-  'taxi',
-  'bus',
-  'train',
-  'ship',
-  'drive',
-  'flight',
-  'check-in',
-  'sightseeing',
-  'restaurant',
-];
+import {POINT_TYPES} from '../mock/point.js';
 
 function formatShortDate(dateString) {
   return new Date(dateString)
@@ -148,8 +137,9 @@ export default class RoutePointPresenter {
       id: this.#point?.id,
       type: pointType,
       pointTypes: POINT_TYPES,
+      offers: this.#pointsModel.offers,
       destinationName: destination?.name || '',
-      destinations: this.#pointsModel.destinations.map((item) => item.name),
+      destinations: this.#pointsModel.destinations,
       startDate: formatDateForForm(this.#point?.dateFrom),
       endDate: formatDateForForm(this.#point?.dateTo),
       price: this.#point?.basePrice ?? '',

@@ -1,82 +1,111 @@
-import View from './view.js';
+import AbstractStatefulView from '../framework/view/abstract-stateful-view.js';
+import {generatePointsData, POINT_TYPES} from '../mock/point.js';
+import {
+  capitalizeType,
+  createOfferSelector,
+  createTypeItem,
+  getDestinationByName,
+  getOffersByType,
+} from './point-form-utils.js';
 
-function createOfferSelector(id, name, title, price, checked = false) {
-  return (`
-    <div class="event__offer-selector">
-      <input class="event__offer-checkbox  visually-hidden" id="${id}" type="checkbox" name="${name}"${checked ? ' checked' : ''}>
-      <label class="event__offer-label" for="${id}">
-        <span class="event__offer-title">${title}</span>
-        &plus;&euro;&nbsp;
-        <span class="event__offer-price">${price}</span>
-      </label>
-    </div>
-  `);
-}
+const {offers: DEFAULT_OFFERS, destinations: DEFAULT_DESTINATIONS} = generatePointsData();
+const DEFAULT_DESTINATION = DEFAULT_DESTINATIONS.find((destination) => destination.name === 'Geneva') ?? DEFAULT_DESTINATIONS[0];
+const DEFAULT_POINT_TYPE = 'flight';
+const DEFAULT_SELECTED_OFFER_IDS = DEFAULT_OFFERS
+  .filter((offer) => offer.type === DEFAULT_POINT_TYPE)
+  .slice(0, 2)
+  .map((offer) => offer.id);
 
-function createTypeItem(id, value, label, checked = false) {
-  return (`
-    <div class="event__type-item">
-      <input id="${id}" class="event__type-input  visually-hidden" type="radio" name="event-type" value="${value}"${checked ? ' checked' : ''}>
-      <label class="event__type-label  event__type-label--${value}" for="${id}">${label}</label>
-    </div>
-  `);
-}
+const EMPTY_CREATE_POINT = {
+  id: 'new-point',
+  type: DEFAULT_POINT_TYPE,
+  pointTypes: POINT_TYPES,
+  offers: DEFAULT_OFFERS,
+  destinationName: DEFAULT_DESTINATION?.name || '',
+  destinations: DEFAULT_DESTINATIONS,
+  startDate: '19/03/19 00:00',
+  endDate: '19/03/19 00:00',
+  price: '',
+  availableOffers: getOffersByType(DEFAULT_OFFERS, DEFAULT_POINT_TYPE, DEFAULT_SELECTED_OFFER_IDS),
+  description: DEFAULT_DESTINATION?.description || '',
+  pictures: DEFAULT_DESTINATION?.pictures || [],
+  isNewPoint: true,
+};
 
-export default class CreatePointView extends View {
+export default class CreatePointView extends AbstractStatefulView {
+  constructor(createPoint = EMPTY_CREATE_POINT) {
+    super();
+    this._setState({
+      ...EMPTY_CREATE_POINT,
+      ...createPoint,
+      pointTypes: createPoint.pointTypes ?? POINT_TYPES,
+      availableOffers: createPoint.availableOffers ?? EMPTY_CREATE_POINT.availableOffers,
+    });
+
+    this.#setInnerHandlers();
+  }
+
   get template() {
+    const {
+      id,
+      type,
+      pointTypes,
+      destinationName,
+      destinations,
+      startDate,
+      endDate,
+      price,
+      availableOffers,
+      description,
+      pictures,
+    } = this._state;
+
+    const pointId = id || 'new-point';
+    const typeLabel = capitalizeType(type);
+
     return (`
       <li class="trip-events__item">
         <form class="event event--edit" action="#" method="post">
           <header class="event__header">
             <div class="event__type-wrapper">
-              <label class="event__type  event__type-btn" for="event-type-toggle-1">
+              <label class="event__type  event__type-btn" for="event-type-toggle-${pointId}">
                 <span class="visually-hidden">Choose event type</span>
-                <img class="event__type-icon" width="17" height="17" src="img/icons/flight.png" alt="Event type icon">
+                <img class="event__type-icon" width="17" height="17" src="img/icons/${type}.png" alt="Event type icon">
               </label>
-              <input class="event__type-toggle  visually-hidden" id="event-type-toggle-1" type="checkbox">
+              <input class="event__type-toggle  visually-hidden" id="event-type-toggle-${pointId}" type="checkbox">
 
               <div class="event__type-list">
                 <fieldset class="event__type-group">
                   <legend class="visually-hidden">Event type</legend>
-                  ${createTypeItem('event-type-taxi-1', 'taxi', 'Taxi')}
-                  ${createTypeItem('event-type-bus-1', 'bus', 'Bus')}
-                  ${createTypeItem('event-type-train-1', 'train', 'Train')}
-                  ${createTypeItem('event-type-ship-1', 'ship', 'Ship')}
-                  ${createTypeItem('event-type-drive-1', 'drive', 'Drive')}
-                  ${createTypeItem('event-type-flight-1', 'flight', 'Flight', true)}
-                  ${createTypeItem('event-type-check-in-1', 'check-in', 'Check-in')}
-                  ${createTypeItem('event-type-sightseeing-1', 'sightseeing', 'Sightseeing')}
-                  ${createTypeItem('event-type-restaurant-1', 'restaurant', 'Restaurant')}
+                  ${pointTypes.map((pointType) => createTypeItem(pointType, type, pointId)).join('')}
                 </fieldset>
               </div>
             </div>
 
             <div class="event__field-group  event__field-group--destination">
-              <label class="event__label  event__type-output" for="event-destination-1">
-                Flight
+              <label class="event__label  event__type-output" for="event-destination-${pointId}">
+                ${typeLabel}
               </label>
-              <input class="event__input  event__input--destination" id="event-destination-1" type="text" name="event-destination" value="Geneva" list="destination-list-1">
-              <datalist id="destination-list-1">
-                <option value="Amsterdam"></option>
-                <option value="Geneva"></option>
-                <option value="Chamonix"></option>
+              <input class="event__input  event__input--destination" id="event-destination-${pointId}" type="text" name="event-destination" value="${destinationName}" list="destination-list-${pointId}">
+              <datalist id="destination-list-${pointId}">
+                ${destinations.map((destination) => `<option value="${destination.name}"></option>`).join('')}
               </datalist>
             </div>
 
             <div class="event__field-group  event__field-group--time">
-              <label class="visually-hidden" for="event-start-time-1">From</label>
-              <input class="event__input  event__input--time" id="event-start-time-1" type="text" name="event-start-time" value="19/03/19 00:00">
+              <label class="visually-hidden" for="event-start-time-${pointId}">From</label>
+              <input class="event__input  event__input--time" id="event-start-time-${pointId}" type="text" name="event-start-time" value="${startDate}">
               &mdash;
-              <label class="visually-hidden" for="event-end-time-1">To</label>
-              <input class="event__input  event__input--time" id="event-end-time-1" type="text" name="event-end-time" value="19/03/19 00:00">
+              <label class="visually-hidden" for="event-end-time-${pointId}">To</label>
+              <input class="event__input  event__input--time" id="event-end-time-${pointId}" type="text" name="event-end-time" value="${endDate}">
             </div>
 
             <div class="event__field-group  event__field-group--price">
-              <label class="event__label" for="event-price-1">
+              <label class="event__label" for="event-price-${pointId}">
                 <span class="visually-hidden">Price</span>
                 &euro;
               </label>
-              <input class="event__input  event__input--price" id="event-price-1" type="text" name="event-price" value="">
+              <input class="event__input  event__input--price" id="event-price-${pointId}" type="text" name="event-price" value="${price}">
             </div>
 
             <button class="event__save-btn  btn  btn--blue" type="submit">Save</button>
@@ -88,25 +117,17 @@ export default class CreatePointView extends View {
               <h3 class="event__section-title  event__section-title--offers">Offers</h3>
 
               <div class="event__available-offers">
-                ${createOfferSelector('event-offer-luggage-1', 'event-offer-luggage', 'Add luggage', 30, true)}
-                ${createOfferSelector('event-offer-comfort-1', 'event-offer-comfort', 'Switch to comfort class', 100, true)}
-                ${createOfferSelector('event-offer-meal-1', 'event-offer-meal', 'Add meal', 15)}
-                ${createOfferSelector('event-offer-seats-1', 'event-offer-seats', 'Choose seats', 5)}
-                ${createOfferSelector('event-offer-train-1', 'event-offer-train', 'Travel by train', 40)}
+                ${availableOffers.map((offer) => createOfferSelector(offer, pointId)).join('')}
               </div>
             </section>
 
             <section class="event__section  event__section--destination">
               <h3 class="event__section-title  event__section-title--destination">Destination</h3>
-              <p class="event__destination-description">Geneva is a city in Switzerland that lies at the southern tip of expansive Lac L&eacute;man (Lake Geneva). Surrounded by the Alps and Jura mountains, the city has views of dramatic Mont Blanc.</p>
+              <p class="event__destination-description">${description}</p>
 
               <div class="event__photos-container">
                 <div class="event__photos-tape">
-                  <img class="event__photo" src="img/photos/1.jpg" alt="Event photo">
-                  <img class="event__photo" src="img/photos/2.jpg" alt="Event photo">
-                  <img class="event__photo" src="img/photos/3.jpg" alt="Event photo">
-                  <img class="event__photo" src="img/photos/4.jpg" alt="Event photo">
-                  <img class="event__photo" src="img/photos/5.jpg" alt="Event photo">
+                  ${pictures.map((picture) => `<img class="event__photo" src="${picture.src}" alt="${picture.description}">`).join('')}
                 </div>
               </div>
             </section>
@@ -114,5 +135,100 @@ export default class CreatePointView extends View {
         </form>
       </li>
     `);
+  }
+
+  #formSubmitHandler = (evt) => {
+    evt.preventDefault();
+  };
+
+  #typeChangeHandler = (evt) => {
+    const {target} = evt;
+
+    if (!target.matches('.event__type-input') || !target.checked) {
+      return;
+    }
+
+    this.updateElement({
+      type: target.value,
+      availableOffers: getOffersByType(this._state.offers, target.value),
+    });
+  };
+
+  #destinationChangeHandler = (evt) => {
+    const {target} = evt;
+
+    if (!target.matches('.event__input--destination')) {
+      return;
+    }
+
+    const destination = getDestinationByName(this._state.destinations, target.value);
+
+    this.updateElement({
+      destinationName: target.value,
+      description: destination?.description || '',
+      pictures: destination?.pictures || [],
+    });
+  };
+
+  #inputHandler = (evt) => {
+    const {target} = evt;
+
+    if (target.matches('.event__input--destination')) {
+      const destination = getDestinationByName(this._state.destinations, target.value);
+
+      this.updateElement({
+        destinationName: target.value,
+        description: destination?.description || '',
+        pictures: destination?.pictures || [],
+      });
+
+      return;
+    }
+
+    if (target.matches('.event__input--price')) {
+      this.updateElement({price: target.value});
+      return;
+    }
+
+    if (target.matches('.event__input--time') && target.name === 'event-start-time') {
+      this.updateElement({startDate: target.value});
+      return;
+    }
+
+    if (target.matches('.event__input--time') && target.name === 'event-end-time') {
+      this.updateElement({endDate: target.value});
+    }
+  };
+
+  #offerChangeHandler = (evt) => {
+    const {target} = evt;
+
+    if (!target.matches('.event__offer-checkbox')) {
+      return;
+    }
+
+    const offerId = target.dataset.offerId;
+
+    this.updateElement({
+      availableOffers: this._state.availableOffers.map((offer) => (
+        offer.id === offerId
+          ? {...offer, checked: target.checked}
+          : offer
+      )),
+    });
+  };
+
+  #setInnerHandlers() {
+    const formElement = this.element.querySelector('.event--edit');
+
+    formElement.addEventListener('submit', this.#formSubmitHandler);
+    formElement.addEventListener('change', this.#typeChangeHandler);
+    formElement.addEventListener('change', this.#destinationChangeHandler);
+    formElement.addEventListener('change', this.#offerChangeHandler);
+    formElement.addEventListener('input', this.#inputHandler);
+  }
+
+  _restoreHandlers() {
+    this.#setInnerHandlers();
   }
 }
