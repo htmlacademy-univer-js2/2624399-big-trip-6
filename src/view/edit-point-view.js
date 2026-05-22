@@ -1,9 +1,18 @@
-import View from './view.js';
+import AbstractStatefulView from '../framework/view/abstract-stateful-view.js';
+import {POINT_TYPES} from '../mock/point.js';
+import {
+  capitalizeType,
+  createOfferSelector,
+  createTypeItem,
+  getDestinationByName,
+  getOffersByType,
+} from './point-form-utils.js';
 
 const EMPTY_EDIT_POINT = {
   id: 'new-point',
-  type: 'taxi',
-  pointTypes: ['taxi', 'bus', 'train', 'ship', 'drive', 'flight', 'check-in', 'sightseeing', 'restaurant'],
+  type: POINT_TYPES[0],
+  pointTypes: POINT_TYPES,
+  offers: [],
   destinationName: '',
   destinations: [],
   startDate: '',
@@ -15,47 +24,18 @@ const EMPTY_EDIT_POINT = {
   isNewPoint: false,
 };
 
-function capitalizeType(type) {
-  return type
-    .split('-')
-    .map((part) => `${part[0].toUpperCase()}${part.slice(1)}`)
-    .join('-');
-}
-
-function createOfferSelector(offer, pointId) {
-  const inputId = `event-offer-${offer.id}-${pointId}`;
-
-  return (`
-    <div class="event__offer-selector">
-      <input class="event__offer-checkbox  visually-hidden" id="${inputId}" type="checkbox" name="event-offer-${offer.id}"${offer.checked ? ' checked' : ''}>
-      <label class="event__offer-label" for="${inputId}">
-        <span class="event__offer-title">${offer.title}</span>
-        &plus;&euro;&nbsp;
-        <span class="event__offer-price">${offer.price}</span>
-      </label>
-    </div>
-  `);
-}
-
-function createTypeItem(type, currentType, pointId) {
-  const inputId = `event-type-${type}-${pointId}`;
-
-  return (`
-    <div class="event__type-item">
-      <input id="${inputId}" class="event__type-input  visually-hidden" type="radio" name="event-type" value="${type}"${type === currentType ? ' checked' : ''}>
-      <label class="event__type-label  event__type-label--${type}" for="${inputId}">${capitalizeType(type)}</label>
-    </div>
-  `);
-}
-
-export default class EditPointView extends View {
-  #editPoint = EMPTY_EDIT_POINT;
+export default class EditPointView extends AbstractStatefulView {
   #onFormSubmit = null;
   #onRollupClick = null;
 
   constructor(editPoint = EMPTY_EDIT_POINT, {onFormSubmit, onRollupClick} = {}) {
     super();
-    this.#editPoint = editPoint;
+    this._setState({
+      ...EMPTY_EDIT_POINT,
+      ...editPoint,
+      pointTypes: editPoint.pointTypes ?? POINT_TYPES,
+      availableOffers: editPoint.availableOffers ?? getOffersByType(editPoint.offers ?? [], editPoint.type ?? POINT_TYPES[0]),
+    });
     this.#onFormSubmit = onFormSubmit;
     this.#onRollupClick = onRollupClick;
 
@@ -76,7 +56,7 @@ export default class EditPointView extends View {
       description,
       pictures,
       isNewPoint,
-    } = this.#editPoint;
+    } = this._state;
 
     const pointId = id || 'new-point';
     const typeLabel = capitalizeType(type);
@@ -107,7 +87,7 @@ export default class EditPointView extends View {
               </label>
               <input class="event__input  event__input--destination" id="event-destination-${pointId}" type="text" name="event-destination" value="${destinationName}" list="destination-list-${pointId}">
               <datalist id="destination-list-${pointId}">
-                ${destinations.map((destination) => `<option value="${destination}"></option>`).join('')}
+                ${destinations.map((destination) => `<option value="${destination.name}"></option>`).join('')}
               </datalist>
             </div>
 
@@ -171,14 +151,99 @@ export default class EditPointView extends View {
     this.#onRollupClick?.();
   };
 
+  #typeChangeHandler = (evt) => {
+    const {target} = evt;
+
+    if (!target.matches('.event__type-input') || !target.checked) {
+      return;
+    }
+
+    this.updateElement({
+      type: target.value,
+      availableOffers: getOffersByType(this._state.offers, target.value),
+    });
+  };
+
+  #destinationChangeHandler = (evt) => {
+    const {target} = evt;
+
+    if (!target.matches('.event__input--destination')) {
+      return;
+    }
+
+    const destination = getDestinationByName(this._state.destinations, target.value);
+
+    this.updateElement({
+      destinationName: target.value,
+      description: destination?.description || '',
+      pictures: destination?.pictures || [],
+    });
+  };
+
+  #inputHandler = (evt) => {
+    const {target} = evt;
+
+    if (target.matches('.event__input--destination')) {
+      const destination = getDestinationByName(this._state.destinations, target.value);
+
+      this.updateElement({
+        destinationName: target.value,
+        description: destination?.description || '',
+        pictures: destination?.pictures || [],
+      });
+
+      return;
+    }
+
+    if (target.matches('.event__input--price')) {
+      this.updateElement({price: target.value});
+      return;
+    }
+
+    if (target.matches('.event__input--time') && target.name === 'event-start-time') {
+      this.updateElement({startDate: target.value});
+      return;
+    }
+
+    if (target.matches('.event__input--time') && target.name === 'event-end-time') {
+      this.updateElement({endDate: target.value});
+    }
+  };
+
+  #offerChangeHandler = (evt) => {
+    const {target} = evt;
+
+    if (!target.matches('.event__offer-checkbox')) {
+      return;
+    }
+
+    const offerId = target.dataset.offerId;
+
+    this.updateElement({
+      availableOffers: this._state.availableOffers.map((offer) => (
+        offer.id === offerId
+          ? {...offer, checked: target.checked}
+          : offer
+      )),
+    });
+  };
+
   #setInnerHandlers() {
     const formElement = this.element.querySelector('.event--edit');
     const rollupButton = this.element.querySelector('.event__rollup-btn');
 
     formElement.addEventListener('submit', this.#formSubmitHandler);
+    formElement.addEventListener('change', this.#typeChangeHandler);
+    formElement.addEventListener('change', this.#destinationChangeHandler);
+    formElement.addEventListener('change', this.#offerChangeHandler);
+    formElement.addEventListener('input', this.#inputHandler);
 
     if (rollupButton) {
       rollupButton.addEventListener('click', this.#rollupClickHandler);
     }
+  }
+
+  _restoreHandlers() {
+    this.#setInnerHandlers();
   }
 }

@@ -13,6 +13,10 @@ module.exports = {
   module: {
     rules: [
       {
+        test: /\.css$/i,
+        use: ['style-loader', 'css-loader'],
+      },
+      {
         test: /\.m?js$/i,
         exclude: /node_modules/,
         use: {
