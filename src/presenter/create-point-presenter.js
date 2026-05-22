@@ -108,13 +108,22 @@ export default class CreatePointPresenter {
   }
 
   #handleFormSubmit = (formState) => {
-    if (this.#isDestroyed) {
+    if (this.#isDestroyed || this.#isSubmitting) {
       return;
     }
 
     this.#isSubmitting = true;
-    this.#onViewAction?.(UserAction.ADD_POINT, UpdateType.MINOR, this.#createPointFromFormState(formState));
-    this.destroy();
+    this.#createPointComponent?.setSaving();
+
+    const actionPromise = this.#onViewAction?.(UserAction.ADD_POINT, UpdateType.MINOR, this.#createPointFromFormState(formState));
+
+    Promise.resolve(actionPromise)
+      .catch(() => {
+        this.#createPointComponent?.setAborting();
+      })
+      .finally(() => {
+        this.#isSubmitting = false;
+      });
   };
 
   #handleFormClose = () => {

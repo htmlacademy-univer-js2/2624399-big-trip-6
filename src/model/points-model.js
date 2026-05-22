@@ -75,8 +75,10 @@ export default class PointsModel extends Observable {
     return this.#offers.find((offer) => offer.id === offerId);
   }
 
-  addPoint(point) {
-    this.#points = [structuredClone(point), ...this.#points];
+  async addPoint(point) {
+    const serverPoint = await this.#apiService.addPoint(point);
+
+    this.#points = [serverPoint, ...this.#points];
     this._notify(ModelEvent.POINTS_CHANGED);
   }
 
@@ -87,7 +89,9 @@ export default class PointsModel extends Observable {
     this._notify(ModelEvent.POINTS_CHANGED);
   }
 
-  deletePoint(pointId) {
+  async deletePoint(pointId) {
+    await this.#apiService.deletePoint(pointId);
+
     this.#points = this.#points.filter((point) => point.id !== pointId);
     this._notify(ModelEvent.POINTS_CHANGED);
   }

@@ -24,6 +24,8 @@ const EMPTY_CREATE_POINT = {
   description: '',
   pictures: [],
   isNewPoint: true,
+  isDisabled: false,
+  saveButtonText: 'Save',
 };
 
 export default class CreatePointView extends AbstractStatefulView {
@@ -58,6 +60,8 @@ export default class CreatePointView extends AbstractStatefulView {
       availableOffers,
       description,
       pictures,
+      isDisabled,
+      saveButtonText,
     } = this._state;
 
     const pointId = id || 'new-point';
@@ -72,7 +76,7 @@ export default class CreatePointView extends AbstractStatefulView {
                 <span class="visually-hidden">Choose event type</span>
                 <img class="event__type-icon" width="17" height="17" src="img/icons/${type}.png" alt="Event type icon">
               </label>
-              <input class="event__type-toggle  visually-hidden" id="event-type-toggle-${pointId}" type="checkbox">
+              <input class="event__type-toggle  visually-hidden" id="event-type-toggle-${pointId}" type="checkbox"${isDisabled ? ' disabled' : ''}>
 
               <div class="event__type-list">
                 <fieldset class="event__type-group">
@@ -86,7 +90,7 @@ export default class CreatePointView extends AbstractStatefulView {
               <label class="event__label  event__type-output" for="event-destination-${pointId}">
                 ${typeLabel}
               </label>
-              <input class="event__input  event__input--destination" id="event-destination-${pointId}" type="text" name="event-destination" value="${destinationName}" list="destination-list-${pointId}">
+              <input class="event__input  event__input--destination" id="event-destination-${pointId}" type="text" name="event-destination" value="${destinationName}" list="destination-list-${pointId}"${isDisabled ? ' disabled' : ''}>
               <datalist id="destination-list-${pointId}">
                 ${destinations.map((destination) => `<option value="${destination.name}"></option>`).join('')}
               </datalist>
@@ -94,10 +98,10 @@ export default class CreatePointView extends AbstractStatefulView {
 
             <div class="event__field-group  event__field-group--time">
               <label class="visually-hidden" for="event-start-time-${pointId}">From</label>
-              <input class="event__input  event__input--time" id="event-start-time-${pointId}" type="text" name="event-start-time" value="${startDate}">
+              <input class="event__input  event__input--time" id="event-start-time-${pointId}" type="text" name="event-start-time" value="${startDate}"${isDisabled ? ' disabled' : ''}>
               &mdash;
               <label class="visually-hidden" for="event-end-time-${pointId}">To</label>
-              <input class="event__input  event__input--time" id="event-end-time-${pointId}" type="text" name="event-end-time" value="${endDate}">
+              <input class="event__input  event__input--time" id="event-end-time-${pointId}" type="text" name="event-end-time" value="${endDate}"${isDisabled ? ' disabled' : ''}>
             </div>
 
             <div class="event__field-group  event__field-group--price">
@@ -105,11 +109,11 @@ export default class CreatePointView extends AbstractStatefulView {
                 <span class="visually-hidden">Price</span>
                 &euro;
               </label>
-              <input class="event__input  event__input--price" id="event-price-${pointId}" type="number" min="0" step="1" inputmode="numeric" name="event-price" value="${price}">
+              <input class="event__input  event__input--price" id="event-price-${pointId}" type="number" min="0" step="1" inputmode="numeric" name="event-price" value="${price}"${isDisabled ? ' disabled' : ''}>
             </div>
 
-            <button class="event__save-btn  btn  btn--blue" type="submit">Save</button>
-            <button class="event__reset-btn" type="reset">Cancel</button>
+            <button class="event__save-btn  btn  btn--blue" type="submit"${isDisabled ? ' disabled' : ''}>${saveButtonText}</button>
+            <button class="event__reset-btn" type="reset"${isDisabled ? ' disabled' : ''}>Cancel</button>
           </header>
 
           <section class="event__details">
@@ -117,7 +121,7 @@ export default class CreatePointView extends AbstractStatefulView {
               <h3 class="event__section-title  event__section-title--offers">Offers</h3>
 
               <div class="event__available-offers">
-                ${availableOffers.map((offer) => createOfferSelector(offer, pointId)).join('')}
+                ${availableOffers.map((offer) => createOfferSelector(offer, pointId, isDisabled)).join('')}
               </div>
             </section>
 
@@ -229,6 +233,16 @@ export default class CreatePointView extends AbstractStatefulView {
       )),
     });
   };
+
+  setSaving() {
+    this.updateElement({isDisabled: true, saveButtonText: 'Saving...'});
+  }
+
+  setAborting() {
+    this.shake(() => {
+      this.updateElement({isDisabled: false, saveButtonText: 'Save'});
+    });
+  }
 
   #setInnerHandlers() {
     const formElement = this.element.querySelector('.event--edit');

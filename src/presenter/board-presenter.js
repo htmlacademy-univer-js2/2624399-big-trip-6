@@ -5,6 +5,7 @@ import EventsListView from '../view/events-list-view.js';
 import NoPointView from '../view/no-point-view.js';
 import RoutePointPresenter from './route-point-presenter.js';
 import CreatePointPresenter from './create-point-presenter.js';
+import UiBlocker from '../framework/ui-blocker/ui-blocker.js';
 
 const SortType = {
   DAY: 'sort-day',
@@ -51,6 +52,7 @@ export default class BoardPresenter {
   #routePointPresenters = [];
   #createPointPresenter = null;
   #sortType = SortType.DAY;
+  #uiBlocker = new UiBlocker({lowerLimit: 300, upperLimit: 1000});
 
   constructor({pointsModel, filterModel}) {
     this.#pointsModel = pointsModel;
@@ -182,22 +184,26 @@ export default class BoardPresenter {
   };
 
   #handleViewAction = async (actionType, updateType, update) => {
+    void updateType;
+
+    this.#uiBlocker.block();
+
     try {
       switch (actionType) {
         case UserAction.UPDATE_POINT:
           await this.#pointsModel.updatePoint(update);
           break;
         case UserAction.DELETE_POINT:
-          this.#pointsModel.deletePoint(update.id);
+          await this.#pointsModel.deletePoint(update.id);
           break;
         case UserAction.ADD_POINT:
-          this.#pointsModel.addPoint(update);
+          await this.#pointsModel.addPoint(update);
           break;
         default:
           break;
       }
-    } catch {
-      void updateType;
+    } finally {
+      this.#uiBlocker.unblock();
     }
   };
 
@@ -223,6 +229,10 @@ export default class BoardPresenter {
     });
     this.#createPointPresenter.init();
   };
+
+  getRoutePointPresenterById(pointId) {
+    return this.#routePointPresenters.find((presenter) => presenter.pointId === pointId);
+  }
 
   init() {
     this.#pointsModel.addObserver(this.#handleModelChange);

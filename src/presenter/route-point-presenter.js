@@ -80,6 +80,10 @@ export default class RoutePointPresenter {
     this.#onViewAction = onViewAction;
   }
 
+  get pointId() {
+    return this.#point.id;
+  }
+
   init() {
     this.#routePointComponent = this.#createRoutePointComponent();
     render(this.#routePointComponent, this.#eventsList, RenderPosition.BEFOREEND);
@@ -169,7 +173,9 @@ export default class RoutePointPresenter {
       isFavorite: updatedRoutePoint.favorite,
     };
 
-    this.#onViewAction?.(UserAction.UPDATE_POINT, UpdateType.PATCH, updatedPoint);
+    const actionPromise = this.#onViewAction?.(UserAction.UPDATE_POINT, UpdateType.PATCH, updatedPoint);
+
+    Promise.resolve(actionPromise).catch(() => {});
   };
 
   #handleEditClick = () => {
@@ -177,11 +183,25 @@ export default class RoutePointPresenter {
   };
 
   #handleFormSubmit = (updatedFormState) => {
-    this.#onViewAction?.(UserAction.UPDATE_POINT, UpdateType.MINOR, this.#createPointFromFormState(updatedFormState));
+    this.#editPointComponent?.setSaving();
+
+    const actionPromise = this.#onViewAction?.(UserAction.UPDATE_POINT, UpdateType.MINOR, this.#createPointFromFormState(updatedFormState));
+
+    Promise.resolve(actionPromise)
+      .catch(() => {
+        this.#editPointComponent?.setAborting();
+      });
   };
 
   #handleDeleteClick = (deletedFormState) => {
-    this.#onViewAction?.(UserAction.DELETE_POINT, UpdateType.MINOR, this.#createPointFromFormState(deletedFormState));
+    this.#editPointComponent?.setDeleting();
+
+    const actionPromise = this.#onViewAction?.(UserAction.DELETE_POINT, UpdateType.MINOR, this.#createPointFromFormState(deletedFormState));
+
+    Promise.resolve(actionPromise)
+      .catch(() => {
+        this.#editPointComponent?.setAborting();
+      });
   };
 
   #createPointFromFormState(formState) {

@@ -5,12 +5,12 @@ function capitalizeType(type) {
     .join('-');
 }
 
-function createOfferSelector(offer, pointId) {
+function createOfferSelector(offer, pointId, isDisabled = false) {
   const inputId = `event-offer-${offer.id}-${pointId}`;
 
   return (`
     <div class="event__offer-selector">
-      <input class="event__offer-checkbox  visually-hidden" data-offer-id="${offer.id}" id="${inputId}" type="checkbox" name="event-offer-${offer.id}"${offer.checked ? ' checked' : ''}>
+      <input class="event__offer-checkbox  visually-hidden" data-offer-id="${offer.id}" id="${inputId}" type="checkbox" name="event-offer-${offer.id}"${offer.checked ? ' checked' : ''}${isDisabled ? ' disabled' : ''}>
       <label class="event__offer-label" for="${inputId}">
         <span class="event__offer-title">${offer.title}</span>
         &plus;&euro;&nbsp;
