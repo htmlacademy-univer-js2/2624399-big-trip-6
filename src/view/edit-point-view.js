@@ -31,10 +31,11 @@ const EMPTY_EDIT_POINT = {
 export default class EditPointView extends AbstractStatefulView {
   #onFormSubmit = null;
   #onRollupClick = null;
+  #onDeleteClick = null;
   #startDatePicker = null;
   #endDatePicker = null;
 
-  constructor(editPoint = EMPTY_EDIT_POINT, {onFormSubmit, onRollupClick} = {}) {
+  constructor(editPoint = EMPTY_EDIT_POINT, {onFormSubmit, onRollupClick, onDeleteClick} = {}) {
     super();
     this._setState({
       ...EMPTY_EDIT_POINT,
@@ -44,6 +45,7 @@ export default class EditPointView extends AbstractStatefulView {
     });
     this.#onFormSubmit = onFormSubmit;
     this.#onRollupClick = onRollupClick;
+    this.#onDeleteClick = onDeleteClick;
 
     this.#setInnerHandlers();
   }
@@ -110,7 +112,7 @@ export default class EditPointView extends AbstractStatefulView {
                 <span class="visually-hidden">Price</span>
                 &euro;
               </label>
-              <input class="event__input  event__input--price" id="event-price-${pointId}" type="text" name="event-price" value="${price}">
+              <input class="event__input  event__input--price" id="event-price-${pointId}" type="number" min="0" step="1" inputmode="numeric" name="event-price" value="${price}">
             </div>
 
             <button class="event__save-btn  btn  btn--blue" type="submit">Save</button>
@@ -149,7 +151,18 @@ export default class EditPointView extends AbstractStatefulView {
 
   #formSubmitHandler = (evt) => {
     evt.preventDefault();
-    this.#onFormSubmit?.();
+    this.#onFormSubmit?.(structuredClone(this._state));
+  };
+
+  #formResetHandler = (evt) => {
+    evt.preventDefault();
+
+    if (this._state.isNewPoint) {
+      this.#onRollupClick?.();
+      return;
+    }
+
+    this.#onDeleteClick?.(structuredClone(this._state));
   };
 
   #rollupClickHandler = (evt) => {
@@ -202,8 +215,13 @@ export default class EditPointView extends AbstractStatefulView {
     }
 
     if (target.matches('.event__input--price')) {
-      this.updateElement({price: target.value});
-      return;
+      const price = target.value.replace(/\D/g, '');
+
+      if (price !== target.value) {
+        target.value = price;
+      }
+
+      this.updateElement({price});
     }
   };
 
@@ -227,7 +245,7 @@ export default class EditPointView extends AbstractStatefulView {
       dateFormat: DATE_FORMAT,
       enableTime: true,
       allowInput: true,
-      time_24hr: true,
+      'time_24hr': true,
       defaultDate: this._state.startDate || null,
       onChange: this.#dateChangeHandler('startDate'),
     });
@@ -236,7 +254,7 @@ export default class EditPointView extends AbstractStatefulView {
       dateFormat: DATE_FORMAT,
       enableTime: true,
       allowInput: true,
-      time_24hr: true,
+      'time_24hr': true,
       defaultDate: this._state.endDate || null,
       onChange: this.#dateChangeHandler('endDate'),
     });
@@ -265,6 +283,7 @@ export default class EditPointView extends AbstractStatefulView {
     const rollupButton = this.element.querySelector('.event__rollup-btn');
 
     formElement.addEventListener('submit', this.#formSubmitHandler);
+    formElement.addEventListener('reset', this.#formResetHandler);
     formElement.addEventListener('change', this.#typeChangeHandler);
     formElement.addEventListener('change', this.#destinationChangeHandler);
     formElement.addEventListener('change', this.#offerChangeHandler);

@@ -33,15 +33,17 @@ function createFilterTemplate({type, disabled}, isChecked) {
 
 export default class FilterView extends View {
   #filters = DEFAULT_FILTERS;
+  #currentFilter = 'everything';
 
-  constructor(filters = DEFAULT_FILTERS) {
+  constructor({filters = DEFAULT_FILTERS, currentFilter = 'everything'} = {}) {
     super();
     this.#filters = filters;
+    this.#currentFilter = currentFilter;
   }
 
   get template() {
     const filtersTemplate = this.#filters
-      .map((filter, index) => createFilterTemplate(filter, index === 0))
+      .map((filter) => createFilterTemplate(filter, filter.type === this.#currentFilter))
       .join('');
 
     return (`

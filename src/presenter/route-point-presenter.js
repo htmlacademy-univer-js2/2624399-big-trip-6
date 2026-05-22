@@ -3,10 +3,24 @@ import RoutePointView from '../view/route-point-view.js';
 import EditPointView from '../view/edit-point-view.js';
 import {POINT_TYPES} from '../mock/point.js';
 import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat.js';
+
+dayjs.extend(customParseFormat);
+
+const FORM_DATE_FORMAT = 'DD/MM/YY HH:mm';
+
+const UserAction = {
+  UPDATE_POINT: 'update-point',
+  DELETE_POINT: 'delete-point',
+};
+
+const UpdateType = {
+  PATCH: 'patch',
+  MINOR: 'minor',
+};
 
 const DATE_LABEL_FORMAT = 'MMM DD';
 const TIME_FORMAT = 'HH:mm';
-const FORM_DATE_FORMAT = 'DD/MM/YY HH:mm';
 
 function formatShortDate(dateString) {
   return dayjs(dateString).format(DATE_LABEL_FORMAT).toUpperCase();
@@ -56,12 +70,14 @@ export default class RoutePointPresenter {
   #editPointComponent = null;
   #isEditing = false;
   #onBeforeEdit = null;
+  #onViewAction = null;
 
-  constructor({point, pointsModel, eventsList, onBeforeEdit}) {
+  constructor({point, pointsModel, eventsList, onBeforeEdit, onViewAction}) {
     this.#point = point;
     this.#pointsModel = pointsModel;
     this.#eventsList = eventsList;
     this.#onBeforeEdit = onBeforeEdit;
+    this.#onViewAction = onViewAction;
   }
 
   init() {
@@ -148,32 +164,45 @@ export default class RoutePointPresenter {
   }
 
   #handleFavoriteClick = (updatedRoutePoint) => {
-    this.#point = {
+    const updatedPoint = {
       ...this.#point,
       isFavorite: updatedRoutePoint.favorite,
     };
 
-    this.#pointsModel.updatePoint(this.#point);
-
-    const updatedRoutePointComponent = this.#createRoutePointComponent();
-
-    if (this.#isEditing) {
-      this.#routePointComponent = updatedRoutePointComponent;
-
-      return;
-    }
-
-    replace(updatedRoutePointComponent, this.#routePointComponent);
-    this.#routePointComponent = updatedRoutePointComponent;
+    this.#onViewAction?.(UserAction.UPDATE_POINT, UpdateType.PATCH, updatedPoint);
   };
 
   #handleEditClick = () => {
     this.replacePointToForm();
   };
 
-  #handleFormSubmit = () => {
-    this.replaceFormToPoint();
+  #handleFormSubmit = (updatedFormState) => {
+    this.#onViewAction?.(UserAction.UPDATE_POINT, UpdateType.MINOR, this.#createPointFromFormState(updatedFormState));
   };
+
+  #handleDeleteClick = (deletedFormState) => {
+    this.#onViewAction?.(UserAction.DELETE_POINT, UpdateType.MINOR, this.#createPointFromFormState(deletedFormState));
+  };
+
+  #createPointFromFormState(formState) {
+    const destination = this.#pointsModel.getDestinationById(
+      this.#pointsModel.destinations.find((item) => item.name === formState.destinationName)?.id,
+    ) || this.#pointsModel.getDestinationById(this.#point.destination);
+    const selectedOfferIds = formState.availableOffers
+      .filter((offer) => offer.checked)
+      .map((offer) => offer.id);
+
+    return {
+      id: formState.id,
+      basePrice: Number(formState.price) || 0,
+      dateFrom: dayjs(formState.startDate, FORM_DATE_FORMAT).toISOString(),
+      dateTo: dayjs(formState.endDate, FORM_DATE_FORMAT).toISOString(),
+      destination: destination?.id || this.#point.destination,
+      isFavorite: this.#point.isFavorite,
+      offers: selectedOfferIds,
+      type: formState.type,
+    };
+  }
 
   #documentEscKeyDownHandler = (evt) => {
     if (evt.key !== 'Escape') {
@@ -195,6 +224,7 @@ export default class RoutePointPresenter {
     return new EditPointView(this.#createEditPointViewModel(), {
       onFormSubmit: this.#handleFormSubmit,
       onRollupClick: this.#handleFormSubmit,
+      onDeleteClick: this.#handleDeleteClick,
     });
   }
 }

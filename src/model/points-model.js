@@ -1,39 +1,83 @@
+import Observable from '../framework/observable.js';
+import {FilterType} from '../mock/filter.js';
 import {generatePointsData} from '../mock/point.js';
 
-export default class PointsModel {
+const ModelEvent = {
+  POINTS_CHANGED: 'points-changed',
+};
+
+function filterPoints(points, filterType) {
+  const now = new Date();
+
+  switch (filterType) {
+    case FilterType.FUTURE:
+      return points.filter((point) => new Date(point.dateFrom) > now);
+    case FilterType.PRESENT:
+      return points.filter((point) => new Date(point.dateFrom) <= now && new Date(point.dateTo) >= now);
+    case FilterType.PAST:
+      return points.filter((point) => new Date(point.dateTo) < now);
+    case FilterType.EVERYTHING:
+    default:
+      return points;
+  }
+}
+
+export default class PointsModel extends Observable {
+  #points = [];
+  #offers = [];
+  #destinations = [];
+
   constructor() {
+    super();
+
     const {points, offers, destinations} = generatePointsData();
 
-    this._points = points;
-    this._offers = offers;
-    this._destinations = destinations;
+    this.#points = points;
+    this.#offers = offers;
+    this.#destinations = destinations;
   }
 
-  get points() {
-    return this._points;
+  getPoints(filterType = FilterType.EVERYTHING) {
+    return filterPoints(this.#points, filterType);
   }
 
   get destinations() {
-    return this._destinations;
+    return this.#destinations;
   }
 
   get offers() {
-    return this._offers;
+    return this.#offers;
   }
 
   getDestinationById(destinationId) {
-    return this._destinations.find((destination) => destination.id === destinationId);
+    return this.#destinations.find((destination) => destination.id === destinationId);
   }
 
   getOffersByType(type) {
-    return this._offers.filter((offer) => offer.type === type);
+    return this.#offers.filter((offer) => offer.type === type);
   }
 
   getOfferById(offerId) {
-    return this._offers.find((offer) => offer.id === offerId);
+    return this.#offers.find((offer) => offer.id === offerId);
+  }
+
+  setPoints(points) {
+    this.#points = structuredClone(points);
+    this._notify(ModelEvent.POINTS_CHANGED);
+  }
+
+  addPoint(point) {
+    this.#points = [structuredClone(point), ...this.#points];
+    this._notify(ModelEvent.POINTS_CHANGED);
   }
 
   updatePoint(updatedPoint) {
-    this._points = this._points.map((point) => (point.id === updatedPoint.id ? updatedPoint : point));
+    this.#points = this.#points.map((point) => (point.id === updatedPoint.id ? structuredClone(updatedPoint) : point));
+    this._notify(ModelEvent.POINTS_CHANGED);
+  }
+
+  deletePoint(pointId) {
+    this.#points = this.#points.filter((point) => point.id !== pointId);
+    this._notify(ModelEvent.POINTS_CHANGED);
   }
 }

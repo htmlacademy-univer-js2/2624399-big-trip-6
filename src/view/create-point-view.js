@@ -1,5 +1,5 @@
 import AbstractStatefulView from '../framework/view/abstract-stateful-view.js';
-import {generatePointsData, POINT_TYPES} from '../mock/point.js';
+import {POINT_TYPES} from '../mock/point.js';
 import {
   capitalizeType,
   createOfferSelector,
@@ -8,31 +8,28 @@ import {
   getOffersByType,
 } from './point-form-utils.js';
 
-const {offers: DEFAULT_OFFERS, destinations: DEFAULT_DESTINATIONS} = generatePointsData();
-const DEFAULT_DESTINATION = DEFAULT_DESTINATIONS.find((destination) => destination.name === 'Geneva') ?? DEFAULT_DESTINATIONS[0];
 const DEFAULT_POINT_TYPE = 'flight';
-const DEFAULT_SELECTED_OFFER_IDS = DEFAULT_OFFERS
-  .filter((offer) => offer.type === DEFAULT_POINT_TYPE)
-  .slice(0, 2)
-  .map((offer) => offer.id);
 
 const EMPTY_CREATE_POINT = {
   id: 'new-point',
   type: DEFAULT_POINT_TYPE,
   pointTypes: POINT_TYPES,
-  offers: DEFAULT_OFFERS,
-  destinationName: DEFAULT_DESTINATION?.name || '',
-  destinations: DEFAULT_DESTINATIONS,
-  startDate: '19/03/19 00:00',
-  endDate: '19/03/19 00:00',
+  offers: [],
+  destinationName: '',
+  destinations: [],
+  startDate: '',
+  endDate: '',
   price: '',
-  availableOffers: getOffersByType(DEFAULT_OFFERS, DEFAULT_POINT_TYPE, DEFAULT_SELECTED_OFFER_IDS),
-  description: DEFAULT_DESTINATION?.description || '',
-  pictures: DEFAULT_DESTINATION?.pictures || [],
+  availableOffers: [],
+  description: '',
+  pictures: [],
   isNewPoint: true,
 };
 
 export default class CreatePointView extends AbstractStatefulView {
+  #onFormSubmit = null;
+  #onFormClose = null;
+
   constructor(createPoint = EMPTY_CREATE_POINT) {
     super();
     this._setState({
@@ -41,6 +38,9 @@ export default class CreatePointView extends AbstractStatefulView {
       pointTypes: createPoint.pointTypes ?? POINT_TYPES,
       availableOffers: createPoint.availableOffers ?? EMPTY_CREATE_POINT.availableOffers,
     });
+
+    this.#onFormSubmit = createPoint.onFormSubmit;
+    this.#onFormClose = createPoint.onFormClose;
 
     this.#setInnerHandlers();
   }
@@ -105,7 +105,7 @@ export default class CreatePointView extends AbstractStatefulView {
                 <span class="visually-hidden">Price</span>
                 &euro;
               </label>
-              <input class="event__input  event__input--price" id="event-price-${pointId}" type="text" name="event-price" value="${price}">
+              <input class="event__input  event__input--price" id="event-price-${pointId}" type="number" min="0" step="1" inputmode="numeric" name="event-price" value="${price}">
             </div>
 
             <button class="event__save-btn  btn  btn--blue" type="submit">Save</button>
@@ -139,6 +139,12 @@ export default class CreatePointView extends AbstractStatefulView {
 
   #formSubmitHandler = (evt) => {
     evt.preventDefault();
+    this.#onFormSubmit?.(structuredClone(this._state));
+  };
+
+  #formResetHandler = (evt) => {
+    evt.preventDefault();
+    this.#onFormClose?.();
   };
 
   #typeChangeHandler = (evt) => {
@@ -186,7 +192,13 @@ export default class CreatePointView extends AbstractStatefulView {
     }
 
     if (target.matches('.event__input--price')) {
-      this.updateElement({price: target.value});
+      const price = target.value.replace(/\D/g, '');
+
+      if (price !== target.value) {
+        target.value = price;
+      }
+
+      this.updateElement({price});
       return;
     }
 
@@ -222,6 +234,7 @@ export default class CreatePointView extends AbstractStatefulView {
     const formElement = this.element.querySelector('.event--edit');
 
     formElement.addEventListener('submit', this.#formSubmitHandler);
+    formElement.addEventListener('reset', this.#formResetHandler);
     formElement.addEventListener('change', this.#typeChangeHandler);
     formElement.addEventListener('change', this.#destinationChangeHandler);
     formElement.addEventListener('change', this.#offerChangeHandler);
