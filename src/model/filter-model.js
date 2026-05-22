@@ -1,5 +1,5 @@
 import Observable from '../framework/observable.js';
-import {FilterType} from '../mock/filter.js';
+import {FilterType} from '../const.js';
 
 const ModelEvent = {
   FILTER_CHANGED: 'filter-changed',

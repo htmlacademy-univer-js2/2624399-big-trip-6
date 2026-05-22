@@ -1,6 +1,5 @@
 import Observable from '../framework/observable.js';
-import {FilterType} from '../mock/filter.js';
-import {generatePointsData} from '../mock/point.js';
+import {FilterType} from '../const.js';
 
 const ModelEvent = {
   POINTS_CHANGED: 'points-changed',
@@ -23,18 +22,33 @@ function filterPoints(points, filterType) {
 }
 
 export default class PointsModel extends Observable {
+  #apiService = null;
   #points = [];
   #offers = [];
   #destinations = [];
 
-  constructor() {
+  constructor(apiService) {
     super();
 
-    const {points, offers, destinations} = generatePointsData();
+    this.#apiService = apiService;
+  }
 
-    this.#points = points;
-    this.#offers = offers;
-    this.#destinations = destinations;
+  async init() {
+    try {
+      const [points, destinations, offers] = await Promise.all([
+        this.#apiService.getPoints(),
+        this.#apiService.getDestinations(),
+        this.#apiService.getOffers(),
+      ]);
+
+      this.#points = points;
+      this.#destinations = destinations;
+      this.#offers = offers;
+    } catch {
+      this.#points = [];
+      this.#offers = [];
+      this.#destinations = [];
+    }
   }
 
   getPoints(filterType = FilterType.EVERYTHING) {
@@ -61,18 +75,15 @@ export default class PointsModel extends Observable {
     return this.#offers.find((offer) => offer.id === offerId);
   }
 
-  setPoints(points) {
-    this.#points = structuredClone(points);
-    this._notify(ModelEvent.POINTS_CHANGED);
-  }
-
   addPoint(point) {
     this.#points = [structuredClone(point), ...this.#points];
     this._notify(ModelEvent.POINTS_CHANGED);
   }
 
-  updatePoint(updatedPoint) {
-    this.#points = this.#points.map((point) => (point.id === updatedPoint.id ? structuredClone(updatedPoint) : point));
+  async updatePoint(updatedPoint) {
+    const serverUpdatedPoint = await this.#apiService.updatePoint(updatedPoint);
+
+    this.#points = this.#points.map((point) => (point.id === serverUpdatedPoint.id ? serverUpdatedPoint : point));
     this._notify(ModelEvent.POINTS_CHANGED);
   }
 

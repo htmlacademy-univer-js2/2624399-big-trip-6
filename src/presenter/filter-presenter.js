@@ -1,5 +1,5 @@
 import {RenderPosition, render, replace} from '../render.js';
-import {generateFilters} from '../mock/filter.js';
+import {generateFilters} from '../utils/filter.js';
 import FilterView from '../view/filter-view.js';
 
 export default class FilterPresenter {
