@@ -1,9 +1,11 @@
 import {RenderPosition, render, replace} from '../render.js';
+import {generateFilters} from '../mock/filter.js';
 import FilterView from '../view/filter-view.js';
 import SortView from '../view/sort-view.js';
 import EventsListView from '../view/events-list-view.js';
 import EditPointView from '../view/edit-point-view.js';
 import RoutePointView from '../view/route-point-view.js';
+import NoPointView from '../view/no-point-view.js';
 
 const POINT_TYPES = [
   'taxi',
@@ -187,12 +189,19 @@ export default class BoardPresenter {
   init() {
     const points = this.#pointsModel.points;
 
-    const filterView = new FilterView();
-    const sortView = new SortView();
-    const eventsListView = new EventsListView();
+    const filterView = new FilterView(generateFilters(points));
 
     render(filterView, this.#filtersContainer, RenderPosition.BEFOREEND);
 
+    if (!points.length) {
+      const noPointView = new NoPointView();
+
+      render(noPointView, this.#eventsContainer, RenderPosition.BEFOREEND);
+      return;
+    }
+
+    const sortView = new SortView();
+    const eventsListView = new EventsListView();
     const tripEventsTitleElement = this.#eventsContainer.querySelector('.visually-hidden');
 
     render(sortView, tripEventsTitleElement, RenderPosition.AFTEREND);
