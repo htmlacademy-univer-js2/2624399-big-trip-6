@@ -49,12 +49,20 @@ function createTypeItem(type, currentType, pointId) {
 }
 
 export default class EditPointView extends View {
-  constructor(editPoint = EMPTY_EDIT_POINT) {
+  #editPoint = EMPTY_EDIT_POINT;
+  #onFormSubmit = null;
+  #onRollupClick = null;
+
+  constructor(editPoint = EMPTY_EDIT_POINT, {onFormSubmit, onRollupClick} = {}) {
     super();
-    this._editPoint = editPoint;
+    this.#editPoint = editPoint;
+    this.#onFormSubmit = onFormSubmit;
+    this.#onRollupClick = onRollupClick;
+
+    this.#setInnerHandlers();
   }
 
-  getTemplate() {
+  get template() {
     const {
       id,
       type,
@@ -68,7 +76,7 @@ export default class EditPointView extends View {
       description,
       pictures,
       isNewPoint,
-    } = this._editPoint;
+    } = this.#editPoint;
 
     const pointId = id || 'new-point';
     const typeLabel = capitalizeType(type);
@@ -151,5 +159,26 @@ export default class EditPointView extends View {
         </form>
       </li>
     `);
+  }
+
+  #formSubmitHandler = (evt) => {
+    evt.preventDefault();
+    this.#onFormSubmit?.();
+  };
+
+  #rollupClickHandler = (evt) => {
+    evt.preventDefault();
+    this.#onRollupClick?.();
+  };
+
+  #setInnerHandlers() {
+    const formElement = this.element.querySelector('.event--edit');
+    const rollupButton = this.element.querySelector('.event__rollup-btn');
+
+    formElement.addEventListener('submit', this.#formSubmitHandler);
+
+    if (rollupButton) {
+      rollupButton.addEventListener('click', this.#rollupClickHandler);
+    }
   }
 }

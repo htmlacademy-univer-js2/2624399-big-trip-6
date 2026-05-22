@@ -1,4 +1,4 @@
-import {RenderPosition, render} from '../render.js';
+import {RenderPosition, render, replace} from '../render.js';
 import FilterView from '../view/filter-view.js';
 import SortView from '../view/sort-view.js';
 import EventsListView from '../view/events-list-view.js';
@@ -66,17 +66,22 @@ function capitalizeType(type) {
 }
 
 export default class BoardPresenter {
+  #pointsModel = null;
+  #filtersContainer = null;
+  #eventsContainer = null;
+  #eventsList = null;
+  #openedPointPresenter = null;
+
   constructor({pointsModel}) {
-    this._pointsModel = pointsModel;
-    this._filtersContainer = document.querySelector('.trip-controls__filters');
-    this._eventsContainer = document.querySelector('.trip-events');
-    this._eventsList = null;
+    this.#pointsModel = pointsModel;
+    this.#filtersContainer = document.querySelector('.trip-controls__filters');
+    this.#eventsContainer = document.querySelector('.trip-events');
   }
 
-  _createRoutePointViewModel(point) {
-    const destination = this._pointsModel.getDestinationById(point.destination);
+  #createRoutePointViewModel(point) {
+    const destination = this.#pointsModel.getDestinationById(point.destination);
     const offers = point.offers
-      .map((offerId) => this._pointsModel.getOfferById(offerId))
+      .map((offerId) => this.#pointsModel.getOfferById(offerId))
       .filter(Boolean)
       .map((offer) => ({
         title: offer.title,
@@ -99,10 +104,10 @@ export default class BoardPresenter {
     };
   }
 
-  _createEditPointViewModel(point = null, isNewPoint = false) {
+  #createEditPointViewModel(point = null, isNewPoint = false) {
     const pointType = point?.type || POINT_TYPES[0];
-    const destination = point ? this._pointsModel.getDestinationById(point.destination) : null;
-    const availableOffers = this._pointsModel
+    const destination = point ? this.#pointsModel.getDestinationById(point.destination) : null;
+    const availableOffers = this.#pointsModel
       .getOffersByType(pointType)
       .map((offer) => ({
         id: offer.id,
@@ -116,7 +121,7 @@ export default class BoardPresenter {
       type: pointType,
       pointTypes: POINT_TYPES,
       destinationName: destination?.name || '',
-      destinations: this._pointsModel.destinations.map((item) => item.name),
+      destinations: this.#pointsModel.destinations.map((item) => item.name),
       startDate: formatDateForForm(point?.dateFrom),
       endDate: formatDateForForm(point?.dateTo),
       price: point?.basePrice ?? '',
@@ -127,29 +132,76 @@ export default class BoardPresenter {
     };
   }
 
+  #handleDocumentEscKeyDown = (evt) => {
+    if (evt.key !== 'Escape') {
+      return;
+    }
+
+    evt.preventDefault();
+
+    if (this.#openedPointPresenter) {
+      this.#openedPointPresenter.replaceFormToPoint();
+    }
+  };
+
+  #renderPoint(point) {
+    const pointPresenter = {};
+
+    const routePointComponent = new RoutePointView(
+      this.#createRoutePointViewModel(point),
+      {
+        onEditClick: () => pointPresenter.replacePointToForm(),
+      }
+    );
+
+    const editPointComponent = new EditPointView(
+      this.#createEditPointViewModel(point),
+      {
+        onFormSubmit: () => pointPresenter.replaceFormToPoint(),
+        onRollupClick: () => pointPresenter.replaceFormToPoint(),
+      }
+    );
+
+    pointPresenter.replacePointToForm = () => {
+      if (this.#openedPointPresenter && this.#openedPointPresenter !== pointPresenter) {
+        this.#openedPointPresenter.replaceFormToPoint();
+      }
+
+      replace(editPointComponent, routePointComponent);
+      this.#openedPointPresenter = pointPresenter;
+      document.addEventListener('keydown', this.#handleDocumentEscKeyDown);
+    };
+
+    pointPresenter.replaceFormToPoint = () => {
+      replace(routePointComponent, editPointComponent);
+
+      if (this.#openedPointPresenter === pointPresenter) {
+        this.#openedPointPresenter = null;
+        document.removeEventListener('keydown', this.#handleDocumentEscKeyDown);
+      }
+    };
+
+    render(routePointComponent, this.#eventsList, RenderPosition.BEFOREEND);
+  }
+
   init() {
-    const points = this._pointsModel.points;
+    const points = this.#pointsModel.points;
 
     const filterView = new FilterView();
     const sortView = new SortView();
     const eventsListView = new EventsListView();
-    const newPointView = new EditPointView(this._createEditPointViewModel(null, true));
-    const editPointView = new EditPointView(this._createEditPointViewModel(points[0]));
 
-    render(filterView, this._filtersContainer, RenderPosition.BEFOREEND);
+    render(filterView, this.#filtersContainer, RenderPosition.BEFOREEND);
 
-    const tripEventsTitleElement = this._eventsContainer.querySelector('.visually-hidden');
+    const tripEventsTitleElement = this.#eventsContainer.querySelector('.visually-hidden');
 
     render(sortView, tripEventsTitleElement, RenderPosition.AFTEREND);
-    render(eventsListView, this._eventsContainer, RenderPosition.BEFOREEND);
+    render(eventsListView, this.#eventsContainer, RenderPosition.BEFOREEND);
 
-    this._eventsList = this._eventsContainer.querySelector('.trip-events__list');
-
-    render(newPointView, this._eventsList, RenderPosition.BEFOREEND);
-    render(editPointView, this._eventsList, RenderPosition.BEFOREEND);
+    this.#eventsList = this.#eventsContainer.querySelector('.trip-events__list');
 
     points.forEach((point) => {
-      render(new RoutePointView(this._createRoutePointViewModel(point)), this._eventsList, RenderPosition.BEFOREEND);
+      this.#renderPoint(point);
     });
   }
 }

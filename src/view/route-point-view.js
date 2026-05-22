@@ -35,13 +35,19 @@ function createOffersMarkup(offers) {
 }
 
 export default class RoutePointView extends View {
-  constructor(routePoint = EMPTY_ROUTE_POINT) {
+  #routePoint = EMPTY_ROUTE_POINT;
+  #onEditClick = null;
+
+  constructor(routePoint = EMPTY_ROUTE_POINT, {onEditClick} = {}) {
     super();
-    this._routePoint = routePoint;
+    this.#routePoint = routePoint;
+    this.#onEditClick = onEditClick;
+
+    this.#setInnerHandlers();
   }
 
-  getTemplate() {
-    const {date, dateLabel, icon, title, start, startLabel, end, endLabel, duration, price, favorite, offers} = this._routePoint;
+  get template() {
+    const {date, dateLabel, icon, title, start, startLabel, end, endLabel, duration, price, favorite, offers} = this.#routePoint;
     const favoriteClass = favorite ? ' event__favorite-btn--active' : '';
 
     return (`
@@ -76,5 +82,20 @@ export default class RoutePointView extends View {
         </div>
       </li>
     `);
+  }
+
+  #rollupClickHandler = (evt) => {
+    evt.preventDefault();
+    this.#onEditClick?.();
+  };
+
+  #setInnerHandlers() {
+    const rollupButton = this.element.querySelector('.event__rollup-btn');
+
+    if (!rollupButton) {
+      return;
+    }
+
+    rollupButton.addEventListener('click', this.#rollupClickHandler);
   }
 }

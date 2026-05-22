@@ -23,7 +23,7 @@ function createTypeItem(id, value, label, checked = false) {
 }
 
 export default class CreatePointView extends View {
-  getTemplate() {
+  get template() {
     return (`
       <li class="trip-events__item">
         <form class="event event--edit" action="#" method="post">

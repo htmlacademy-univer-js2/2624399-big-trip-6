@@ -1,21 +1,21 @@
 import {createElement} from '../render.js';
 
 export default class View {
-  _element = null;
+  #element = null;
 
-  getTemplate() {
+  get template() {
     throw new Error('Abstract method must be implemented');
   }
 
-  getElement() {
-    if (!this._element) {
-      this._element = createElement(this.getTemplate());
+  get element() {
+    if (!this.#element) {
+      this.#element = createElement(this.template);
     }
 
-    return this._element;
+    return this.#element;
   }
 
   removeElement() {
-    this._element = null;
+    this.#element = null;
   }
 }

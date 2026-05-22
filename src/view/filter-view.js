@@ -1,7 +1,7 @@
 import View from './view.js';
 
 export default class FilterView extends View {
-  getTemplate() {
+  get template() {
     return (`
       <form class="trip-filters" action="#" method="get">
         <div class="trip-filters__filter">
