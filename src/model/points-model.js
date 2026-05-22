@@ -28,4 +28,8 @@ export default class PointsModel {
   getOfferById(offerId) {
     return this._offers.find((offer) => offer.id === offerId);
   }
+
+  updatePoint(updatedPoint) {
+    this._points = this._points.map((point) => (point.id === updatedPoint.id ? updatedPoint : point));
+  }
 }

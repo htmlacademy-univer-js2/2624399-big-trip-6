@@ -37,11 +37,13 @@ function createOffersMarkup(offers) {
 export default class RoutePointView extends View {
   #routePoint = EMPTY_ROUTE_POINT;
   #onEditClick = null;
+  #onFavoriteClick = null;
 
-  constructor(routePoint = EMPTY_ROUTE_POINT, {onEditClick} = {}) {
+  constructor(routePoint = EMPTY_ROUTE_POINT, {onEditClick, onFavoriteClick} = {}) {
     super();
     this.#routePoint = routePoint;
     this.#onEditClick = onEditClick;
+    this.#onFavoriteClick = onFavoriteClick;
 
     this.#setInnerHandlers();
   }
@@ -89,13 +91,27 @@ export default class RoutePointView extends View {
     this.#onEditClick?.();
   };
 
+  #favoriteClickHandler = (evt) => {
+    evt.preventDefault();
+
+    this.#onFavoriteClick?.({
+      ...this.#routePoint,
+      favorite: !this.#routePoint.favorite,
+    });
+  };
+
   #setInnerHandlers() {
     const rollupButton = this.element.querySelector('.event__rollup-btn');
+    const favoriteButton = this.element.querySelector('.event__favorite-btn');
 
     if (!rollupButton) {
       return;
     }
 
     rollupButton.addEventListener('click', this.#rollupClickHandler);
+
+    if (favoriteButton) {
+      favoriteButton.addEventListener('click', this.#favoriteClickHandler);
+    }
   }
 }
