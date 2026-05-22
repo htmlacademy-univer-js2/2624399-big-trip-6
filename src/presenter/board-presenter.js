@@ -6,12 +6,35 @@ import EventsListView from '../view/events-list-view.js';
 import NoPointView from '../view/no-point-view.js';
 import RoutePointPresenter from './route-point-presenter.js';
 
+const SortType = {
+  DAY: 'sort-day',
+  TIME: 'sort-time',
+  PRICE: 'sort-price',
+};
+
+function sortPointsByDate(points) {
+  return [...points].sort((pointA, pointB) => new Date(pointA.dateFrom) - new Date(pointB.dateFrom));
+}
+
+function getPointDuration(point) {
+  return new Date(point.dateTo) - new Date(point.dateFrom);
+}
+
+function sortPointsByDuration(points) {
+  return [...points].sort((pointA, pointB) => getPointDuration(pointB) - getPointDuration(pointA));
+}
+
+function sortPointsByPrice(points) {
+  return [...points].sort((pointA, pointB) => pointB.basePrice - pointA.basePrice);
+}
+
 export default class BoardPresenter {
   #pointsModel = null;
   #filtersContainer = null;
   #eventsContainer = null;
   #eventsList = null;
   #routePointPresenters = [];
+  #sortType = SortType.DAY;
 
   constructor({pointsModel}) {
     this.#pointsModel = pointsModel;
@@ -22,6 +45,55 @@ export default class BoardPresenter {
   #resetRoutePointsView() {
     this.#routePointPresenters.forEach((presenter) => presenter.resetView());
   }
+
+  #clearRoutePoints() {
+    this.#routePointPresenters = [];
+
+    if (this.#eventsList) {
+      this.#eventsList.innerHTML = '';
+    }
+  }
+
+  #getSortedPoints() {
+    const points = this.#pointsModel.points;
+
+    switch (this.#sortType) {
+      case SortType.TIME:
+        return sortPointsByDuration(points);
+      case SortType.PRICE:
+        return sortPointsByPrice(points);
+      case SortType.DAY:
+      default:
+        return sortPointsByDate(points);
+    }
+  }
+
+  #renderRoutePoints() {
+    const points = this.#getSortedPoints();
+
+    this.#clearRoutePoints();
+
+    points.forEach((point) => {
+      const routePointPresenter = new RoutePointPresenter({
+        point,
+        pointsModel: this.#pointsModel,
+        eventsList: this.#eventsList,
+        onBeforeEdit: () => this.#resetRoutePointsView(),
+      });
+
+      this.#routePointPresenters.push(routePointPresenter);
+      routePointPresenter.init();
+    });
+  }
+
+  #sortTypeChangeHandler = (sortType) => {
+    if (this.#sortType === sortType) {
+      return;
+    }
+
+    this.#sortType = sortType;
+    this.#renderRoutePoints();
+  };
 
   init() {
     const points = this.#pointsModel.points;
@@ -39,7 +111,9 @@ export default class BoardPresenter {
       return;
     }
 
-    const sortView = new SortView();
+    const sortView = new SortView({
+      onSortTypeChange: this.#sortTypeChangeHandler,
+    });
     const eventsListView = new EventsListView();
     const tripEventsTitleElement = this.#eventsContainer.querySelector('.visually-hidden');
 
@@ -48,16 +122,6 @@ export default class BoardPresenter {
 
     this.#eventsList = this.#eventsContainer.querySelector('.trip-events__list');
 
-    points.forEach((point) => {
-      const routePointPresenter = new RoutePointPresenter({
-        point,
-        pointsModel: this.#pointsModel,
-        eventsList: this.#eventsList,
-        onBeforeEdit: () => this.#resetRoutePointsView(),
-      });
-
-      this.#routePointPresenters.push(routePointPresenter);
-      routePointPresenter.init();
-    });
+    this.#renderRoutePoints();
   }
 }
