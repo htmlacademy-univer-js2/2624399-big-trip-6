@@ -1,9 +1,4 @@
-const FilterType = {
-  EVERYTHING: 'everything',
-  FUTURE: 'future',
-  PRESENT: 'present',
-  PAST: 'past',
-};
+import {FilterType} from '../const.js';
 
 const isFuturePoint = (point) => new Date(point.dateFrom) > new Date();
 const isPresentPoint = (point) => {
@@ -31,4 +26,4 @@ function generateFilters(points) {
   });
 }
 
-export {FilterType, generateFilters};
+export {generateFilters};

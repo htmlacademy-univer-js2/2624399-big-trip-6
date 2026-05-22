@@ -1,7 +1,7 @@
 import {RenderPosition, render, replace} from '../render.js';
 import RoutePointView from '../view/route-point-view.js';
 import EditPointView from '../view/edit-point-view.js';
-import {POINT_TYPES} from '../mock/point.js';
+import {POINT_TYPES} from '../const.js';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat.js';
 

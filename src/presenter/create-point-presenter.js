@@ -2,7 +2,7 @@ import {RenderPosition, render, remove} from '../render.js';
 import CreatePointView from '../view/create-point-view.js';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat.js';
-import {POINT_TYPES} from '../mock/point.js';
+import {POINT_TYPES} from '../const.js';
 
 dayjs.extend(customParseFormat);
 

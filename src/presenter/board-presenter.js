@@ -1,5 +1,5 @@
 import {RenderPosition, render} from '../render.js';
-import {FilterType} from '../mock/filter.js';
+import {FilterType} from '../const.js';
 import SortView from '../view/sort-view.js';
 import EventsListView from '../view/events-list-view.js';
 import NoPointView from '../view/no-point-view.js';
@@ -181,22 +181,24 @@ export default class BoardPresenter {
     this.#renderBoard();
   };
 
-  #handleViewAction = (actionType, updateType, update) => {
-    switch (actionType) {
-      case UserAction.UPDATE_POINT:
-        this.#pointsModel.updatePoint(update);
-        break;
-      case UserAction.DELETE_POINT:
-        this.#pointsModel.deletePoint(update.id);
-        break;
-      case UserAction.ADD_POINT:
-        this.#pointsModel.addPoint(update);
-        break;
-      default:
-        break;
+  #handleViewAction = async (actionType, updateType, update) => {
+    try {
+      switch (actionType) {
+        case UserAction.UPDATE_POINT:
+          await this.#pointsModel.updatePoint(update);
+          break;
+        case UserAction.DELETE_POINT:
+          this.#pointsModel.deletePoint(update.id);
+          break;
+        case UserAction.ADD_POINT:
+          this.#pointsModel.addPoint(update);
+          break;
+        default:
+          break;
+      }
+    } catch {
+      void updateType;
     }
-
-    void updateType;
   };
 
   #handleAddPointClick = () => {
