@@ -1,5 +1,20 @@
 import View from './view.js';
 
+const EMPTY_ROUTE_POINT = {
+  date: '',
+  dateLabel: '',
+  icon: 'img/icons/taxi.png',
+  title: '',
+  start: '',
+  startLabel: '',
+  end: '',
+  endLabel: '',
+  duration: '',
+  price: '',
+  favorite: false,
+  offers: [],
+};
+
 function createOffersMarkup(offers) {
   if (!offers.length) {
     return '';
@@ -20,13 +35,13 @@ function createOffersMarkup(offers) {
 }
 
 export default class RoutePointView extends View {
-  constructor(event) {
+  constructor(routePoint = EMPTY_ROUTE_POINT) {
     super();
-    this._event = event;
+    this._routePoint = routePoint;
   }
 
   getTemplate() {
-    const {date, dateLabel, icon, title, start, startLabel, end, endLabel, duration, price, favorite, offers} = this._event;
+    const {date, dateLabel, icon, title, start, startLabel, end, endLabel, duration, price, favorite, offers} = this._routePoint;
     const favoriteClass = favorite ? ' event__favorite-btn--active' : '';
 
     return (`
