@@ -1,5 +1,7 @@
 import AbstractStatefulView from '../framework/view/abstract-stateful-view.js';
 import {POINT_TYPES} from '../mock/point.js';
+import flatpickr from 'flatpickr';
+import 'flatpickr/dist/flatpickr.min.css';
 import {
   capitalizeType,
   createOfferSelector,
@@ -7,6 +9,8 @@ import {
   getDestinationByName,
   getOffersByType,
 } from './point-form-utils.js';
+
+const DATE_FORMAT = 'd/m/y H:i';
 
 const EMPTY_EDIT_POINT = {
   id: 'new-point',
@@ -27,6 +31,8 @@ const EMPTY_EDIT_POINT = {
 export default class EditPointView extends AbstractStatefulView {
   #onFormSubmit = null;
   #onRollupClick = null;
+  #startDatePicker = null;
+  #endDatePicker = null;
 
   constructor(editPoint = EMPTY_EDIT_POINT, {onFormSubmit, onRollupClick} = {}) {
     super();
@@ -199,16 +205,42 @@ export default class EditPointView extends AbstractStatefulView {
       this.updateElement({price: target.value});
       return;
     }
-
-    if (target.matches('.event__input--time') && target.name === 'event-start-time') {
-      this.updateElement({startDate: target.value});
-      return;
-    }
-
-    if (target.matches('.event__input--time') && target.name === 'event-end-time') {
-      this.updateElement({endDate: target.value});
-    }
   };
+
+  #dateChangeHandler = (fieldName) => (_selectedDates, dateString) => {
+    this.updateElement({[fieldName]: dateString});
+  };
+
+  #destroyDatePickers() {
+    this.#startDatePicker?.destroy();
+    this.#endDatePicker?.destroy();
+    this.#startDatePicker = null;
+    this.#endDatePicker = null;
+  }
+
+  #setDatePickers() {
+    const pointId = this._state.id || 'new-point';
+    const startDateElement = this.element.querySelector(`#event-start-time-${pointId}`);
+    const endDateElement = this.element.querySelector(`#event-end-time-${pointId}`);
+
+    this.#startDatePicker = flatpickr(startDateElement, {
+      dateFormat: DATE_FORMAT,
+      enableTime: true,
+      allowInput: true,
+      time_24hr: true,
+      defaultDate: this._state.startDate || null,
+      onChange: this.#dateChangeHandler('startDate'),
+    });
+
+    this.#endDatePicker = flatpickr(endDateElement, {
+      dateFormat: DATE_FORMAT,
+      enableTime: true,
+      allowInput: true,
+      time_24hr: true,
+      defaultDate: this._state.endDate || null,
+      onChange: this.#dateChangeHandler('endDate'),
+    });
+  }
 
   #offerChangeHandler = (evt) => {
     const {target} = evt;
@@ -241,6 +273,14 @@ export default class EditPointView extends AbstractStatefulView {
     if (rollupButton) {
       rollupButton.addEventListener('click', this.#rollupClickHandler);
     }
+
+    this.#destroyDatePickers();
+    this.#setDatePickers();
+  }
+
+  removeElement() {
+    this.#destroyDatePickers();
+    super.removeElement();
   }
 
   _restoreHandlers() {

@@ -2,31 +2,35 @@ import {RenderPosition, render, replace} from '../render.js';
 import RoutePointView from '../view/route-point-view.js';
 import EditPointView from '../view/edit-point-view.js';
 import {POINT_TYPES} from '../mock/point.js';
+import dayjs from 'dayjs';
+
+const DATE_LABEL_FORMAT = 'MMM DD';
+const TIME_FORMAT = 'HH:mm';
+const FORM_DATE_FORMAT = 'DD/MM/YY HH:mm';
 
 function formatShortDate(dateString) {
-  return new Date(dateString)
-    .toLocaleDateString('en-US', {month: 'short', day: '2-digit'})
-    .toUpperCase();
+  return dayjs(dateString).format(DATE_LABEL_FORMAT).toUpperCase();
 }
 
 function formatTime(dateString) {
-  return new Date(dateString).toLocaleTimeString('en-GB', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
+  return dayjs(dateString).format(TIME_FORMAT);
 }
 
 function formatDuration(dateFrom, dateTo) {
-  const durationInMinutes = Math.round((new Date(dateTo) - new Date(dateFrom)) / (1000 * 60));
-  const hours = Math.floor(durationInMinutes / 60);
+  const durationInMinutes = dayjs(dateTo).diff(dayjs(dateFrom), 'minute');
+  const days = Math.floor(durationInMinutes / (24 * 60));
+  const hours = Math.floor((durationInMinutes % (24 * 60)) / 60);
   const minutes = durationInMinutes % 60;
 
-  if (!hours) {
+  if (!days && !hours) {
     return `${minutes}M`;
   }
 
-  return `${String(hours).padStart(2, '0')}H ${String(minutes).padStart(2, '0')}M`;
+  if (!days) {
+    return `${String(hours).padStart(2, '0')}H ${String(minutes).padStart(2, '0')}M`;
+  }
+
+  return `${String(days).padStart(2, '0')}D ${String(hours).padStart(2, '0')}H ${String(minutes).padStart(2, '0')}M`;
 }
 
 function formatDateForForm(dateString) {
@@ -34,14 +38,7 @@ function formatDateForForm(dateString) {
     return '';
   }
 
-  const date = new Date(dateString);
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const year = String(date.getFullYear()).slice(-2);
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-
-  return `${day}/${month}/${year} ${hours}:${minutes}`;
+  return dayjs(dateString).format(FORM_DATE_FORMAT);
 }
 
 function capitalizeType(type) {
