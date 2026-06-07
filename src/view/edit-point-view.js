@@ -76,6 +76,33 @@ export default class EditPointView extends AbstractStatefulView {
     const typeLabel = capitalizeType(type);
     const defaultResetButtonLabel = isNewPoint ? 'Cancel' : 'Delete';
     const effectiveResetButtonText = resetButtonText ?? defaultResetButtonLabel;
+    const hasDestination = Boolean(description || pictures.length);
+    const hasOffers = availableOffers.length > 0;
+
+    const destinationSection = hasDestination ? `
+      <section class="event__section  event__section--destination">
+        <h3 class="event__section-title  event__section-title--destination">Destination</h3>
+        <p class="event__destination-description">${description}</p>
+
+        ${pictures.length ? `
+          <div class="event__photos-container">
+            <div class="event__photos-tape">
+              ${pictures.map((picture) => `<img class="event__photo" src="${picture.src}" alt="${picture.description}">`).join('')}
+            </div>
+          </div>
+        ` : ''}
+      </section>
+    ` : '';
+
+    const offersSection = hasOffers ? `
+      <section class="event__section  event__section--offers">
+        <h3 class="event__section-title  event__section-title--offers">Offers</h3>
+
+        <div class="event__available-offers">
+          ${availableOffers.map((offer) => createOfferSelector(offer, pointId, isDisabled)).join('')}
+        </div>
+      </section>
+    ` : '';
 
     return (`
       <li class="trip-events__item">
@@ -132,24 +159,8 @@ export default class EditPointView extends AbstractStatefulView {
           </header>
 
           <section class="event__details">
-            <section class="event__section  event__section--offers">
-              <h3 class="event__section-title  event__section-title--offers">Offers</h3>
-
-              <div class="event__available-offers">
-                ${availableOffers.map((offer) => createOfferSelector(offer, pointId, isDisabled)).join('')}
-              </div>
-            </section>
-
-            <section class="event__section  event__section--destination">
-              <h3 class="event__section-title  event__section-title--destination">Destination</h3>
-              <p class="event__destination-description">${description}</p>
-
-              <div class="event__photos-container">
-                <div class="event__photos-tape">
-                  ${pictures.map((picture) => `<img class="event__photo" src="${picture.src}" alt="${picture.description}">`).join('')}
-                </div>
-              </div>
-            </section>
+            ${offersSection}
+            ${destinationSection}
           </section>
         </form>
       </li>

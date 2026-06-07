@@ -2,9 +2,11 @@ import View from './view.js';
 
 export default class SortView extends View {
   #onSortTypeChange = null;
+  #currentSortType = 'sort-day';
 
-  constructor({onSortTypeChange} = {}) {
+  constructor({currentSortType = 'sort-day', onSortTypeChange} = {}) {
     super();
+    this.#currentSortType = currentSortType;
     this.#onSortTypeChange = onSortTypeChange;
 
     this.#setInnerHandlers();
@@ -14,7 +16,7 @@ export default class SortView extends View {
     return (`
       <form class="trip-events__trip-sort  trip-sort" action="#" method="get">
         <div class="trip-sort__item  trip-sort__item--day" data-sort-type="sort-day">
-          <input id="sort-day" class="trip-sort__input  visually-hidden" type="radio" name="trip-sort" value="sort-day" checked data-sort-type="sort-day">
+          <input id="sort-day" class="trip-sort__input  visually-hidden" type="radio" name="trip-sort" value="sort-day"${this.#currentSortType === 'sort-day' ? ' checked' : ''} data-sort-type="sort-day">
           <label class="trip-sort__btn" for="sort-day">Day</label>
         </div>
 
@@ -24,12 +26,12 @@ export default class SortView extends View {
         </div>
 
         <div class="trip-sort__item  trip-sort__item--time" data-sort-type="sort-time">
-          <input id="sort-time" class="trip-sort__input  visually-hidden" type="radio" name="trip-sort" value="sort-time" data-sort-type="sort-time">
+          <input id="sort-time" class="trip-sort__input  visually-hidden" type="radio" name="trip-sort" value="sort-time"${this.#currentSortType === 'sort-time' ? ' checked' : ''} data-sort-type="sort-time">
           <label class="trip-sort__btn" for="sort-time">Time</label>
         </div>
 
         <div class="trip-sort__item  trip-sort__item--price" data-sort-type="sort-price">
-          <input id="sort-price" class="trip-sort__input  visually-hidden" type="radio" name="trip-sort" value="sort-price" data-sort-type="sort-price">
+          <input id="sort-price" class="trip-sort__input  visually-hidden" type="radio" name="trip-sort" value="sort-price"${this.#currentSortType === 'sort-price' ? ' checked' : ''} data-sort-type="sort-price">
           <label class="trip-sort__btn" for="sort-price">Price</label>
         </div>
 

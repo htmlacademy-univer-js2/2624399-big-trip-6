@@ -21,7 +21,7 @@ function generateFilters(points) {
 
     return {
       type,
-      disabled: type !== FilterType.EVERYTHING && pointsCount === 0,
+      disabled: points.length === 0 || (type !== FilterType.EVERYTHING && pointsCount === 0),
     };
   });
 }

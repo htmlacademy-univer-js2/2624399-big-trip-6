@@ -183,6 +183,10 @@ export default class RoutePointPresenter {
   };
 
   #handleFormSubmit = (updatedFormState) => {
+    if (!updatedFormState) {
+      return;
+    }
+
     this.#editPointComponent?.setSaving();
 
     const actionPromise = this.#onViewAction?.(UserAction.UPDATE_POINT, UpdateType.MINOR, this.#createPointFromFormState(updatedFormState));
@@ -194,6 +198,10 @@ export default class RoutePointPresenter {
   };
 
   #handleDeleteClick = (deletedFormState) => {
+    if (!deletedFormState) {
+      return;
+    }
+
     this.#editPointComponent?.setDeleting();
 
     const actionPromise = this.#onViewAction?.(UserAction.DELETE_POINT, UpdateType.MINOR, this.#createPointFromFormState(deletedFormState));
@@ -204,11 +212,13 @@ export default class RoutePointPresenter {
       });
   };
 
-  #createPointFromFormState(formState) {
+  #createPointFromFormState(formState = {}) {
+    const destinationName = formState.destinationName ?? '';
+    const availableOffers = formState.availableOffers ?? [];
     const destination = this.#pointsModel.getDestinationById(
-      this.#pointsModel.destinations.find((item) => item.name === formState.destinationName)?.id,
+      this.#pointsModel.destinations.find((item) => item.name === destinationName)?.id,
     ) || this.#pointsModel.getDestinationById(this.#point.destination);
-    const selectedOfferIds = formState.availableOffers
+    const selectedOfferIds = availableOffers
       .filter((offer) => offer.checked)
       .map((offer) => offer.id);
 
@@ -243,7 +253,7 @@ export default class RoutePointPresenter {
   #createEditPointComponent() {
     return new EditPointView(this.#createEditPointViewModel(), {
       onFormSubmit: this.#handleFormSubmit,
-      onRollupClick: this.#handleFormSubmit,
+      onRollupClick: this.replaceFormToPoint,
       onDeleteClick: this.#handleDeleteClick,
     });
   }

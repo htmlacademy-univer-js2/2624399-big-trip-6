@@ -2,11 +2,11 @@ import {RenderPosition, render, remove} from '../render.js';
 import CreatePointView from '../view/create-point-view.js';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat.js';
-import {POINT_TYPES} from '../const.js';
 
 dayjs.extend(customParseFormat);
 
 const FORM_DATE_FORMAT = 'DD/MM/YY HH:mm';
+const DEFAULT_POINT_TYPE = 'flight';
 
 const UserAction = {
   ADD_POINT: 'add-point',
@@ -38,8 +38,12 @@ export default class CreatePointPresenter {
     }
 
     this.#isDestroyed = false;
-    this.#createPointComponent = new CreatePointView(this.#createPointViewModel());
+    this.#createPointComponent = new CreatePointView(this.#createPointViewModel(), {
+      onFormSubmit: this.#handleFormSubmit,
+      onFormClose: this.#handleFormClose,
+    });
     render(this.#createPointComponent, this.#eventsList, RenderPosition.AFTERBEGIN);
+    this.#createPointComponent.initDatePickers();
 
     document.addEventListener('keydown', this.#documentEscKeyDownHandler);
   }
@@ -62,36 +66,34 @@ export default class CreatePointPresenter {
   }
 
   #createPointViewModel() {
-    const pointType = POINT_TYPES.includes(this.#pointsModel.offers[0]?.type) ? this.#pointsModel.offers[0].type : POINT_TYPES[0];
-    const destination = this.#pointsModel.destinations[0];
-    const now = dayjs();
+    const pointType = DEFAULT_POINT_TYPE;
 
     return {
       id: 'new-point',
       type: pointType,
       offers: this.#pointsModel.offers,
-      destinationName: destination?.name || '',
+      destinationName: '',
       destinations: this.#pointsModel.destinations,
-      startDate: now.format(FORM_DATE_FORMAT),
-      endDate: now.add(1, 'hour').format(FORM_DATE_FORMAT),
-      price: '',
+      startDate: '',
+      endDate: '',
+      price: 0,
       availableOffers: this.#pointsModel.getOffersByType(pointType).map((offer) => ({
         id: offer.id,
         title: offer.title,
         price: offer.price,
         checked: false,
       })),
-      description: destination?.description || '',
-      pictures: destination?.pictures || [],
+      description: '',
+      pictures: [],
       isNewPoint: true,
-      onFormSubmit: this.#handleFormSubmit,
-      onFormClose: this.#handleFormClose,
     };
   }
 
-  #createPointFromFormState(formState) {
-    const destination = this.#pointsModel.destinations.find((item) => item.name === formState.destinationName) ?? this.#pointsModel.destinations[0];
-    const selectedOfferIds = formState.availableOffers
+  #createPointFromFormState(formState = {}) {
+    const destinationName = formState.destinationName ?? '';
+    const availableOffers = formState.availableOffers ?? [];
+    const destination = this.#pointsModel.destinations.find((item) => item.name === destinationName) ?? this.#pointsModel.destinations[0];
+    const selectedOfferIds = availableOffers
       .filter((offer) => offer.checked)
       .map((offer) => offer.id);
 

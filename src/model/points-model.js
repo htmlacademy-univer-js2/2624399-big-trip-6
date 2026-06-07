@@ -44,10 +44,16 @@ export default class PointsModel extends Observable {
       this.#points = points;
       this.#destinations = destinations;
       this.#offers = offers;
+
+      this._notify(ModelEvent.POINTS_CHANGED);
+
+      return true;
     } catch {
       this.#points = [];
       this.#offers = [];
       this.#destinations = [];
+
+      return false;
     }
   }
 

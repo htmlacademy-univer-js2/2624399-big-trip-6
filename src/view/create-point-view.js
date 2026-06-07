@@ -1,5 +1,7 @@
 import AbstractStatefulView from '../framework/view/abstract-stateful-view.js';
 import {POINT_TYPES} from '../const.js';
+import flatpickr from 'flatpickr';
+import 'flatpickr/dist/flatpickr.min.css';
 import {
   capitalizeType,
   createOfferSelector,
@@ -8,6 +10,7 @@ import {
   getOffersByType,
 } from './point-form-utils.js';
 
+const DATE_FORMAT = 'd/m/y H:i';
 const DEFAULT_POINT_TYPE = 'flight';
 
 const EMPTY_CREATE_POINT = {
@@ -31,8 +34,10 @@ const EMPTY_CREATE_POINT = {
 export default class CreatePointView extends AbstractStatefulView {
   #onFormSubmit = null;
   #onFormClose = null;
+  #startDatePicker = null;
+  #endDatePicker = null;
 
-  constructor(createPoint = EMPTY_CREATE_POINT) {
+  constructor(createPoint = EMPTY_CREATE_POINT, {onFormSubmit, onFormClose} = {}) {
     super();
     this._setState({
       ...EMPTY_CREATE_POINT,
@@ -41,8 +46,8 @@ export default class CreatePointView extends AbstractStatefulView {
       availableOffers: createPoint.availableOffers ?? EMPTY_CREATE_POINT.availableOffers,
     });
 
-    this.#onFormSubmit = createPoint.onFormSubmit;
-    this.#onFormClose = createPoint.onFormClose;
+    this.#onFormSubmit = onFormSubmit;
+    this.#onFormClose = onFormClose;
 
     this.#setInnerHandlers();
   }
@@ -66,6 +71,33 @@ export default class CreatePointView extends AbstractStatefulView {
 
     const pointId = id || 'new-point';
     const typeLabel = capitalizeType(type);
+    const hasDestination = Boolean(description || pictures.length);
+    const hasOffers = availableOffers.length > 0;
+
+    const destinationSection = hasDestination ? `
+      <section class="event__section  event__section--destination">
+        <h3 class="event__section-title  event__section-title--destination">Destination</h3>
+        <p class="event__destination-description">${description}</p>
+
+        ${pictures.length ? `
+          <div class="event__photos-container">
+            <div class="event__photos-tape">
+              ${pictures.map((picture) => `<img class="event__photo" src="${picture.src}" alt="${picture.description}">`).join('')}
+            </div>
+          </div>
+        ` : ''}
+      </section>
+    ` : '';
+
+    const offersSection = hasOffers ? `
+      <section class="event__section  event__section--offers">
+        <h3 class="event__section-title  event__section-title--offers">Offers</h3>
+
+        <div class="event__available-offers">
+          ${availableOffers.map((offer) => createOfferSelector(offer, pointId, isDisabled)).join('')}
+        </div>
+      </section>
+    ` : '';
 
     return (`
       <li class="trip-events__item">
@@ -117,24 +149,8 @@ export default class CreatePointView extends AbstractStatefulView {
           </header>
 
           <section class="event__details">
-            <section class="event__section  event__section--offers">
-              <h3 class="event__section-title  event__section-title--offers">Offers</h3>
-
-              <div class="event__available-offers">
-                ${availableOffers.map((offer) => createOfferSelector(offer, pointId, isDisabled)).join('')}
-              </div>
-            </section>
-
-            <section class="event__section  event__section--destination">
-              <h3 class="event__section-title  event__section-title--destination">Destination</h3>
-              <p class="event__destination-description">${description}</p>
-
-              <div class="event__photos-container">
-                <div class="event__photos-tape">
-                  ${pictures.map((picture) => `<img class="event__photo" src="${picture.src}" alt="${picture.description}">`).join('')}
-                </div>
-              </div>
-            </section>
+            ${offersSection}
+            ${destinationSection}
           </section>
         </form>
       </li>
@@ -149,6 +165,10 @@ export default class CreatePointView extends AbstractStatefulView {
   #formResetHandler = (evt) => {
     evt.preventDefault();
     this.#onFormClose?.();
+  };
+
+  #dateChangeHandler = (fieldName) => (_selectedDates, dateString) => {
+    this._setState({[fieldName]: dateString});
   };
 
   #typeChangeHandler = (evt) => {
@@ -207,12 +227,12 @@ export default class CreatePointView extends AbstractStatefulView {
     }
 
     if (target.matches('.event__input--time') && target.name === 'event-start-time') {
-      this.updateElement({startDate: target.value});
+      this._setState({startDate: target.value});
       return;
     }
 
     if (target.matches('.event__input--time') && target.name === 'event-end-time') {
-      this.updateElement({endDate: target.value});
+      this._setState({endDate: target.value});
     }
   };
 
@@ -234,6 +254,50 @@ export default class CreatePointView extends AbstractStatefulView {
     });
   };
 
+  #timeInputClickHandler = (evt) => {
+    const {target} = evt;
+
+    if (target.name === 'event-start-time') {
+      this.#destroyDatePickers();
+      this.#initializeDatePicker('startDate', target);
+      return;
+    }
+
+    if (target.name === 'event-end-time') {
+      this.#destroyDatePickers();
+      this.#initializeDatePicker('endDate', target);
+    }
+  };
+
+  #destroyDatePickers() {
+    this.#startDatePicker?.destroy();
+    this.#endDatePicker?.destroy();
+    this.#startDatePicker = null;
+    this.#endDatePicker = null;
+  }
+
+  #initializeDatePicker(fieldName, inputElement) {
+    const picker = flatpickr(inputElement, {
+      dateFormat: DATE_FORMAT,
+      enableTime: true,
+      allowInput: true,
+      'time_24hr': true,
+      inline: true,
+      closeOnSelect: false,
+      defaultDate: this._state[fieldName] || null,
+      onChange: this.#dateChangeHandler(fieldName),
+      onClose: fieldName === 'endDate' ? () => picker.open() : undefined,
+    });
+
+    if (fieldName === 'startDate') {
+      this.#startDatePicker = picker;
+    } else {
+      this.#endDatePicker = picker;
+    }
+
+    picker.open();
+  }
+
   setSaving() {
     this.updateElement({isDisabled: true, saveButtonText: 'Saving...'});
   }
@@ -244,6 +308,15 @@ export default class CreatePointView extends AbstractStatefulView {
     });
   }
 
+  initDatePickers() {
+    this.#destroyDatePickers();
+  }
+
+  removeElement() {
+    this.#destroyDatePickers();
+    super.removeElement();
+  }
+
   #setInnerHandlers() {
     const formElement = this.element.querySelector('.event--edit');
 
@@ -252,6 +325,7 @@ export default class CreatePointView extends AbstractStatefulView {
     formElement.addEventListener('change', this.#typeChangeHandler);
     formElement.addEventListener('change', this.#destinationChangeHandler);
     formElement.addEventListener('change', this.#offerChangeHandler);
+    formElement.addEventListener('mousedown', this.#timeInputClickHandler);
     formElement.addEventListener('input', this.#inputHandler);
   }
 
