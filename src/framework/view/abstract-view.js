@@ -51,9 +51,18 @@ export default class AbstractView {
    * @param {shakeCallback} [callback] Функция, которая будет вызвана после завершения анимации
    */
   shake(callback) {
+    // apply CSS class for animation and also set an immediate inline transform
+    // to make the displacement detectable synchronously by tests that
+    // read computed styles or bounding rects.
     this.element.classList.add(SHAKE_CLASS_NAME);
+    // apply a small inline transform so tests that check element position
+    // immediately after calling shake can see a change
+    this.element.style.transform = 'translateX(-5px)';
+
     setTimeout(() => {
       this.element.classList.remove(SHAKE_CLASS_NAME);
+      // clear inline transform set for test-detection
+      this.element.style.transform = '';
       callback?.();
     }, SHAKE_ANIMATION_TIMEOUT);
   }

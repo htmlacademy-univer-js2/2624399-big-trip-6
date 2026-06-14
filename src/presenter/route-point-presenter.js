@@ -189,7 +189,14 @@ export default class RoutePointPresenter {
 
     this.#editPointComponent?.setSaving();
 
-    const actionPromise = this.#onViewAction?.(UserAction.UPDATE_POINT, UpdateType.MINOR, this.#createPointFromFormState(updatedFormState));
+    let actionPromise;
+
+    try {
+      actionPromise = this.#onViewAction?.(UserAction.UPDATE_POINT, UpdateType.MINOR, this.#createPointFromFormState(updatedFormState));
+    } catch {
+      this.#editPointComponent?.setAborting();
+      return;
+    }
 
     Promise.resolve(actionPromise)
       .catch(() => {
