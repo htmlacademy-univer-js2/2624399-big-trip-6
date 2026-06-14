@@ -22,7 +22,6 @@ function adaptPointToServer(point) {
     dateFrom,
     dateTo,
     isFavorite,
-    id,
     ...restPoint
   } = point;
 
