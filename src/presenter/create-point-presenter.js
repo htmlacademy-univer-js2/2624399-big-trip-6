@@ -97,11 +97,17 @@ export default class CreatePointPresenter {
       .filter((offer) => offer.checked)
       .map((offer) => offer.id);
 
+    const startDate = dayjs(formState.startDate, FORM_DATE_FORMAT);
+    const endDate = dayjs(formState.endDate, FORM_DATE_FORMAT);
+
+    if (!startDate.isValid() || !endDate.isValid() || endDate.isBefore(startDate)) {
+      throw new Error('Invalid date');
+    }
+
     return {
-      id: `point-${Date.now()}`,
       basePrice: Number(formState.price) || 0,
-      dateFrom: dayjs(formState.startDate, FORM_DATE_FORMAT).toISOString(),
-      dateTo: dayjs(formState.endDate, FORM_DATE_FORMAT).toISOString(),
+      dateFrom: startDate.toISOString(),
+      dateTo: endDate.toISOString(),
       destination: destination?.id,
       isFavorite: false,
       offers: selectedOfferIds,
@@ -117,7 +123,15 @@ export default class CreatePointPresenter {
     this.#isSubmitting = true;
     this.#createPointComponent?.setSaving();
 
-    const actionPromise = this.#onViewAction?.(UserAction.ADD_POINT, UpdateType.MINOR, this.#createPointFromFormState(formState));
+    let actionPromise;
+
+    try {
+      actionPromise = this.#onViewAction?.(UserAction.ADD_POINT, UpdateType.MINOR, this.#createPointFromFormState(formState));
+    } catch {
+      this.#createPointComponent?.setAborting();
+      this.#isSubmitting = false;
+      return;
+    }
 
     Promise.resolve(actionPromise)
       .catch(() => {

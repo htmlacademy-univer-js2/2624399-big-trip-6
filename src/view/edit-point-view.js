@@ -169,6 +169,20 @@ export default class EditPointView extends AbstractStatefulView {
 
   #formSubmitHandler = (evt) => {
     evt.preventDefault();
+    const destinationInput = this.element.querySelector('.event__input--destination');
+    const destinationValue = destinationInput?.value.trim();
+    const destination = getDestinationByName(this._state.destinations, destinationValue);
+
+    if (!destination && destinationValue) {
+      destinationInput.value = '';
+      this._state.destinationName = '';
+      this.updateElement({
+        destinationName: '',
+        description: '',
+        pictures: [],
+      });
+      return;
+    }
     this.#onFormSubmit?.(structuredClone(this._state));
   };
 
@@ -210,10 +224,21 @@ export default class EditPointView extends AbstractStatefulView {
 
     const destination = getDestinationByName(this._state.destinations, target.value);
 
+    if (!destination) {
+      target.value = '';
+      this._state.destinationName = '';
+      this.updateElement({
+        destinationName: '',
+        description: '',
+        pictures: [],
+      });
+      return;
+    }
+
     this.updateElement({
       destinationName: target.value,
-      description: destination?.description || '',
-      pictures: destination?.pictures || [],
+      description: destination.description,
+      pictures: destination.pictures,
     });
   };
 
@@ -221,14 +246,6 @@ export default class EditPointView extends AbstractStatefulView {
     const {target} = evt;
 
     if (target.matches('.event__input--destination')) {
-      const destination = getDestinationByName(this._state.destinations, target.value);
-
-      this.updateElement({
-        destinationName: target.value,
-        description: destination?.description || '',
-        pictures: destination?.pictures || [],
-      });
-
       return;
     }
 
@@ -239,7 +256,16 @@ export default class EditPointView extends AbstractStatefulView {
         target.value = price;
       }
 
-      this.updateElement({price});
+      this._state.price = price;
+    }
+
+    if (target.matches('.event__input--time') && target.name === 'event-start-time') {
+      this._state.startDate = target.value;
+      return;
+    }
+
+    if (target.matches('.event__input--time') && target.name === 'event-end-time') {
+      this._state.endDate = target.value;
     }
   };
 
@@ -319,9 +345,13 @@ export default class EditPointView extends AbstractStatefulView {
   #setInnerHandlers() {
     const formElement = this.element.querySelector('.event--edit');
     const rollupButton = this.element.querySelector('.event__rollup-btn');
+    const resetButton = this.element.querySelector('.event__reset-btn');
 
     formElement.addEventListener('submit', this.#formSubmitHandler);
     formElement.addEventListener('reset', this.#formResetHandler);
+    if (resetButton) {
+      resetButton.addEventListener('click', this.#formResetHandler);
+    }
     formElement.addEventListener('change', this.#typeChangeHandler);
     formElement.addEventListener('change', this.#destinationChangeHandler);
     formElement.addEventListener('change', this.#offerChangeHandler);
