@@ -264,6 +264,7 @@ export default class EditPointView extends AbstractStatefulView {
       enableTime: true,
       allowInput: true,
       'time_24hr': true,
+      appendTo: document.body,
       defaultDate: this._state.startDate || null,
       onChange: this.#dateChangeHandler('startDate'),
     });
@@ -273,6 +274,7 @@ export default class EditPointView extends AbstractStatefulView {
       enableTime: true,
       allowInput: true,
       'time_24hr': true,
+      appendTo: document.body,
       defaultDate: this._state.endDate || null,
       onChange: this.#dateChangeHandler('endDate'),
     });

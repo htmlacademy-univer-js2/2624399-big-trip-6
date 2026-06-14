@@ -282,7 +282,7 @@ export default class CreatePointView extends AbstractStatefulView {
       enableTime: true,
       allowInput: true,
       'time_24hr': true,
-      inline: true,
+      appendTo: document.body,
       closeOnSelect: false,
       defaultDate: this._state[fieldName] || null,
       onChange: this.#dateChangeHandler(fieldName),
